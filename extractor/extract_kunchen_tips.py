@@ -58,7 +58,7 @@ class ExtractedTip(BaseModel):
     )
     context_summary: Optional[str] = Field(
         default=None,
-        description="Kontekst: na co odpowiada Kun Chen lub jaki problem rozwiązuje (szczególnie istotne przy komentarzach pod wpisami innych)."
+        description="Kontekst: na co odpowiada autor lub jaki problem rozwiązuje (szczególnie istotne przy komentarzach pod wpisami innych)."
     )
     tip: Optional[str] = Field(
         default=None,
@@ -68,13 +68,21 @@ class ExtractedTip(BaseModel):
         default=None,
         description="Anty-wzorzec, pułapka lub błąd, przed którym ostrzega (jeśli dotyczy, po polsku)."
     )
+    has_conflict: bool = Field(
+        default=False,
+        description="True, jeśli autor prezentuje tezę sporną, podważa powszechne przekonanie branżowe, zmienia wcześniejsze zdanie lub jego teza stoi w sprzeczności z innymi powszechnymi praktykami inżynierskimi."
+    )
+    conflict_notes: Optional[str] = Field(
+        default=None,
+        description="Opis sprzeczności / kontrowersji do rozstrzygnięcia przez inżyniera (np. 'Autor zaleca X wbrew powszechnemu Y ze względu na Z')."
+    )
     vault_links: List[str] = Field(
         default_factory=list,
         description="Sugerowane linki do pojęć w Obsidianie, np. ['[[Harness]]', '[[Weryfikator]]', '[[Interpretable Context Methodology]]', '[[Jev]]'] jeśli pasują."
     )
     original_quote: Optional[str] = Field(
         default=None,
-        description="Kluczowy fragment wypowiedzi Kuna Chena w oryginalnym brzmieniu (język angielski)."
+        description="Kluczowy fragment wypowiedzi w oryginalnym brzmieniu (język angielski)."
     )
 
     @field_validator("vault_links", mode="before")
@@ -98,7 +106,7 @@ class ExtractedTip(BaseModel):
 
 
 def fetch_tweets_from_apify(
-    handle: str, max_items: int = 80, until_date: Optional[str] = None
+    handle: str, max_items: int = 80, until_date: Optional[str] = None, since_date: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """Pobiera tweety i komentarze danego użytkownika przez Apify."""
     if not APIFY_API_TOKEN:
@@ -109,6 +117,8 @@ def fetch_tweets_from_apify(
     from apify_client import ApifyClient
 
     query = f"from:{handle}"
+    if since_date:
+        query += f" since:{since_date}"
     if until_date:
         query += f" until:{until_date}"
 
@@ -242,12 +252,12 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], min_score: float = 1.35) -> 
                 "instructions": (
                     f"Rate the substantive engineering utility of `tweets[{i}]` for an AI Engineering knowledge base. "
                     "Evaluate whether it delivers concrete architectural rules, model behavioral insights, "
-                    "agent harness practices, context window tactics, or verifiable production anti-patterns."
+                    "agent harness practices, context window tactics, evaluation/eval methodology, or verifiable production anti-patterns."
                 ),
                 "criteria": [
-                    "No technical utility: casual chatter, social gratitude, generic reaction, or empty meme.",
+                    "No technical utility: casual chatter, social gratitude, generic reaction, promotional, or empty meme.",
                     "Marginal technical utility: broad opinion, high-level commentary, or non-actionable observation.",
-                    "High technical utility: concrete heuristic, specific architectural rule, failure mode analysis, or actionable engineering guidance."
+                    "High technical utility: concrete heuristic, specific architectural rule, failure mode analysis, evaluation design, or actionable engineering guidance."
                 ],
             }
             questions[f"topic_{i}"] = {
@@ -396,18 +406,29 @@ def generate_obsidian_markdown(
 
     md = []
     md.append("---")
-    md.append(f"autor: Kun Chen (@{handle})")
+    md.append(f"autor: @{handle}")
     md.append(f"źródło: https://x.com/{handle}")
     md.append(f"wygenerowano: {now_str}")
     md.append("typ: synteza-wiedzy")
-    md.append("tagi: [kun-chen, ai-engineering, prompt-engineering, twitter-extract]")
+    md.append(f"tagi: [{handle.lower()}, ai-engineering, prompt-engineering, twitter-extract]")
     md.append("---\n")
 
-    md.append(f"# Kun Chen (@{handle}) — Baza Wskazówek i Komentarzy\n")
+    md.append(f"# @{handle} — Baza Wskazówek i Komentarzy\n")
     md.append(
         "> Destylacja praktycznych porad, heurystyk inżynierskich i komentarzy technicznych "
-        f"Kuna Chena z Twittera/X. Wyciągnięto {len(results)} wartościowych wpisów.\n"
+        f"z profilu @{handle} na platformie X. Wyciągnięto {len(results)} wartościowych wpisów.\n"
     )
+
+    # Sekcja sporów i rozbieżności
+    conflicts = [item for item in results if item["tip_obj"].has_conflict]
+    if conflicts:
+        md.append("## ⚠️ Kwestie sporne i rozbieżności do rozstrzygnięcia\n")
+        md.append("> Wpisy, w których autor podważa powszechne przekonania branżowe lub prezentuje tezy stojące w sprzeczności z innymi praktykami:\n")
+        for item in conflicts:
+            t: ExtractedTip = item["tip_obj"]
+            raw = item["tweet"]
+            md.append(f"- **[{t.title or 'Kwestia sporna'}]({raw['url']}):** {t.conflict_notes or t.tip}")
+        md.append("\n---\n")
 
     md.append("## Spis kategorii\n")
     for cat, items in by_category.items():
@@ -439,6 +460,9 @@ def generate_obsidian_markdown(
 
             if t.pitfall:
                 md.append(f"**Uwaga / Anty-wzorzec:**\n{t.pitfall}\n")
+
+            if t.has_conflict and t.conflict_notes:
+                md.append(f"**⚡ Kwestia sporna / do rozstrzygnięcia:**\n{t.conflict_notes}\n")
 
             if t.original_quote:
                 md.append(f"> **Cytat:** *\"{t.original_quote}\"*\n")
@@ -479,13 +503,18 @@ def main():
     )
     parser.add_argument(
         "--output",
-        default="Źródła/Kun Chen — Baza Wskazówek i Komentarzy.md",
-        help="Ścieżka pliku wyjściowego w Obsidianie",
+        default=None,
+        help="Ścieżka pliku wyjściowego w Obsidianie (domyślnie generowana z nazwy handle)",
+    )
+    parser.add_argument(
+        "--since",
+        default=None,
+        help="Data początkowa w formacie YYYY-MM-DD (np. 2026-08-01)",
     )
     parser.add_argument(
         "--until",
         default=None,
-        help="Data graniczna wstecz w formacie YYYY-MM-DD (np. 2026-09-18) do pobrania starszych wpisów",
+        help="Data graniczna wstecz w formacie YYYY-MM-DD (np. 2026-09-01)",
     )
     parser.add_argument(
         "--skip-jev",
@@ -519,7 +548,7 @@ def main():
         with open(cache_path, "r", encoding="utf-8") as f:
             raw_items = json.load(f)
     else:
-        raw_items = fetch_tweets_from_apify(args.handle, args.max_tweets, until_date=args.until)
+        raw_items = fetch_tweets_from_apify(args.handle, args.max_tweets, until_date=args.until, since_date=args.since)
         # Łączymy z istniejącym cache, deduplikując po id
         existing_raw = []
         if cache_path.exists():
@@ -598,7 +627,10 @@ def main():
 
     # 5. Generowanie Markdown do Obsidiana
     root_dir = Path(__file__).parent.parent
-    output_file = root_dir / args.output
+    if args.output:
+        output_file = root_dir / args.output
+    else:
+        output_file = root_dir / f"Źródła/{args.handle} — Baza Wskazówek i Komentarzy.md"
     generate_obsidian_markdown(valuable_results, output_file, args.handle)
 
 
