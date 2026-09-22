@@ -97,23 +97,29 @@ class ExtractedTip(BaseModel):
         return links
 
 
-def fetch_tweets_from_apify(handle: str, max_items: int = 80) -> List[Dict[str, Any]]:
+def fetch_tweets_from_apify(
+    handle: str, max_items: int = 80, until_date: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """Pobiera tweety i komentarze danego użytkownika przez Apify."""
     if not APIFY_API_TOKEN:
         raise ValueError(
-            "Brak APIFY_API_TOKEN. Ustaw go w pliku scripts/.env lub zmiennych środowiskowych."
+            "Brak APIFY_API_TOKEN. Ustaw go w pliku .env lub zmiennych środowiskowych."
         )
 
     from apify_client import ApifyClient
 
-    print(f"[*] Łączenie z Apify w celu pobrania wpisów @{handle} (limit: {max_items})...")
+    query = f"from:{handle}"
+    if until_date:
+        query += f" until:{until_date}"
+
+    print(f"[*] Łączenie z Apify w celu pobrania wpisów @{handle} (query: '{query}', limit: {max_items})...")
     client = ApifyClient(APIFY_API_TOKEN)
 
     # Używamy aktora kompatybilnego w 100% z Apify Free Plan
     actor_id = "scrape.badger/twitter-tweets-scraper"
     run_input = {
         "mode": "Advanced Search",
-        "query": f"from:{handle}",
+        "query": query,
         "query_type": "Latest",
         "max_results": max_items,
     }
@@ -248,6 +254,7 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], threshold: float) -> List[Tu
             headers={
                 "Authorization": f"Bearer {TYPESAFE_API_KEY}",
                 "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             },
             method="POST",
         )
@@ -451,6 +458,11 @@ def main():
         help="Ścieżka pliku wyjściowego w Obsidianie",
     )
     parser.add_argument(
+        "--until",
+        default=None,
+        help="Data graniczna wstecz w formacie YYYY-MM-DD (np. 2026-09-18) do pobrania starszych wpisów",
+    )
+    parser.add_argument(
         "--skip-jev",
         action="store_true",
         help="Pomiń filtr Jev i wyślij wszystkie znormalizowane wpisy do LLM",
@@ -482,10 +494,26 @@ def main():
         with open(cache_path, "r", encoding="utf-8") as f:
             raw_items = json.load(f)
     else:
-        raw_items = fetch_tweets_from_apify(args.handle, args.max_tweets)
+        raw_items = fetch_tweets_from_apify(args.handle, args.max_tweets, until_date=args.until)
+        # Łączymy z istniejącym cache, deduplikując po id
+        existing_raw = []
+        if cache_path.exists():
+            try:
+                existing_raw = json.loads(cache_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        merged_by_id = {}
+        for item in existing_raw + raw_items:
+            tid = str(item.get("id") or item.get("id_str") or item.get("tweet_id") or "")
+            if tid:
+                merged_by_id[tid] = item
+            else:
+                merged_by_id[str(len(merged_by_id))] = item
+        
+        all_raw_items = list(merged_by_id.values())
         with open(cache_path, "w", encoding="utf-8") as f:
-            json.dump(raw_items, f, ensure_ascii=False, indent=2)
-        print(f"[+] Zapisano surowe dane do cache: {cache_path}")
+            json.dump(all_raw_items, f, ensure_ascii=False, indent=2)
+        print(f"[+] Zapisano zaktualizowany cache: {cache_path} ({len(all_raw_items)} unikalnych wpisów).")
 
         if args.fetch_only:
             print("[*] Zakończono etap pobierania (--fetch-only).")
