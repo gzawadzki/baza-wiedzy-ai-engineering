@@ -1,0 +1,16 @@
+# Python / Środowisko
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Klucze i konfiguracja
+scripts/.env
+.env
+
+# Cache danych z Twittera
+scripts/*_raw_tweets.json
+
+# Obsidian workspace
+.obsidian/workspace*
