@@ -1,121 +1,562 @@
 ---
 autor: Kun Chen (@kunchenguid)
 źródło: https://x.com/kunchenguid
-wygenerowano: 2026-09-23 01:39
+wygenerowano: 2026-09-23 01:47
 typ: synteza-wiedzy
 tagi: [kun-chen, ai-engineering, prompt-engineering, twitter-extract]
 ---
 
 # Kun Chen (@kunchenguid) — Baza Wskazówek i Komentarzy
 
-> Destylacja praktycznych porad, heurystyk inżynierskich i komentarzy technicznych Kuna Chena z Twittera/X. Wyciągnięto 18 wartościowych wpisów.
+> Destylacja praktycznych porad, heurystyk inżynierskich i komentarzy technicznych Kuna Chena z Twittera/X. Wyciągnięto 32 wartościowych wpisów.
 
 ## Spis kategorii
 
-- [Inżynieria promptów / Systemy agentowe](#inżynieria-promptów--systemy-agentowe) (1)
-- [Praktyki weryfikacji / Code Review](#praktyki-weryfikacji--code-review) (1)
-- [Obserwacje zachowania modeli / Prompt Architecture](#obserwacje-zachowania-modeli--prompt-architecture) (1)
-- [Orkiestracja multi-agentowa / Routing](#orkiestracja-multi-agentowa--routing) (1)
-- [Zachowanie modeli / Prompt architecture](#zachowanie-modeli--prompt-architecture) (1)
+- [Eval / Zarządzanie zasobami](#eval--zarządzanie-zasobami) (1)
+- [Ekonomia agentów / koszt kontekstu](#ekonomia-agentów--koszt-kontekstu) (1)
+- [Architektura harnessu / Routing modeli](#architektura-harnessu--routing-modeli) (1)
+- [Architektura systemów agentowych / Zarządzanie kosztami](#architektura-systemów-agentowych--zarządzanie-kosztami) (1)
+- [Architektura systemów AI / Routing i orkiestracja](#architektura-systemów-ai--routing-i-orkiestracja) (1)
+- [Ewaluacja agentów / Architektura orkiestracji](#ewaluacja-agentów--architektura-orkiestracji) (1)
+- [Harness / Narzędzia i konfiguracja](#harness--narzędzia-i-konfiguracja) (1)
+- [Harnessy i weryfikacja krokowa](#harnessy-i-weryfikacja-krokowa) (1)
+- [Weryfikacja / Proces inżynierski](#weryfikacja--proces-inżynierski) (1)
+- [Wybór harnessu / routing modeli](#wybór-harnessu--routing-modeli) (1)
+- [Obserwacje zachowania modeli / Ewaluacja modeli](#obserwacje-zachowania-modeli--ewaluacja-modeli) (1)
+- [Architektura systemów / Wybór modelu (LLM vs klasyczne ML)](#architektura-systemów--wybór-modelu-(llm-vs-klasyczne-ml)) (1)
+- [Weryfikacja / Agent Harness](#weryfikacja--agent-harness) (1)
+- [Orkiestracja agentów / Architektura kontekstu](#orkiestracja-agentów--architektura-kontekstu) (1)
+- [Architektura harnessa / Routing i selekcja modeli](#architektura-harnessa--routing-i-selekcja-modeli) (1)
+- [Architektura systemów agentowych / Optymalizacja kosztów](#architektura-systemów-agentowych--optymalizacja-kosztów) (1)
+- [Paradygmaty budowania oprogramowania z AI](#paradygmaty-budowania-oprogramowania-z-ai) (1)
+- [Architektura agentów / Orkiestracja i optymalizacja kosztów](#architektura-agentów--orkiestracja-i-optymalizacja-kosztów) (1)
+- [Architektura narzędzi agenta (tool design / harness)](#architektura-narzędzi-agenta-(tool-design--harness)) (1)
+- [Harness / Ekosystem narzędzi i strategia vendorowa](#harness--ekosystem-narzędzi-i-strategia-vendorowa) (1)
+- [Ewaluacja i wybór modeli](#ewaluacja-i-wybór-modeli) (1)
+- [Wybór modelu / debugowanie agentowe](#wybór-modelu--debugowanie-agentowe) (1)
+- [Architektura agentów / Orkiestracja](#architektura-agentów--orkiestracja) (1)
+- [Harness i zarządzanie kontekstem / koszty](#harness-i-zarządzanie-kontekstem--koszty) (1)
 - [Zarządzanie kontekstem / Harness](#zarządzanie-kontekstem--harness) (1)
-- [Zarządzanie kosztami / Prompt caching / Higiena sesji agenta](#zarządzanie-kosztami--prompt-caching--higiena-sesji-agenta) (1)
-- [Inżynieria produktu AI / ocena modeli](#inżynieria-produktu-ai--ocena-modeli) (1)
-- [Harness / Zarządzanie kontekstem i sesją agenta](#harness--zarządzanie-kontekstem-i-sesją-agenta) (1)
-- [Zarządzanie kontekstem / Harness agenta](#zarządzanie-kontekstem--harness-agenta) (1)
-- [Context Engineering / zarządzanie oknem kontekstowym agenta](#context-engineering--zarządzanie-oknem-kontekstowym-agenta) (1)
-- [Zarządzanie kontekstem / Prompt Caching](#zarządzanie-kontekstem--prompt-caching) (1)
-- [Zarządzanie kontekstem / Kompakcja i okno kontekstowe agenta](#zarządzanie-kontekstem--kompakcja-i-okno-kontekstowe-agenta) (1)
-- [Architektura systemów LLM / Wybór podejścia](#architektura-systemów-llm--wybór-podejścia) (1)
-- [Weryfikacja i harness](#weryfikacja-i-harness) (1)
-- [Architektura systemów AI / Agent Design](#architektura-systemów-ai--agent-design) (1)
-- [Architektura harnessów i routing zadań / optymalizacja kosztów i latencji](#architektura-harnessów-i-routing-zadań--optymalizacja-kosztów-i-latencji) (1)
-- [Architektura systemów agentowych / Routing modeli i koszty](#architektura-systemów-agentowych--routing-modeli-i-koszty) (1)
+- [Zarządzanie kontekstem i kosztami](#zarządzanie-kontekstem-i-kosztami) (1)
+- [Zarządzanie kontekstem / ewolucja praktyk inżynierskich](#zarządzanie-kontekstem--ewolucja-praktyk-inżynierskich) (1)
+- [Zarządzanie kontekstem / Harness agentowy](#zarządzanie-kontekstem--harness-agentowy) (1)
+- [Inne obserwacje](#inne-obserwacje) (1)
+- [Zarządzanie kontekstem / Harnessy agentowe / Ewaluacja promptów](#zarządzanie-kontekstem--harnessy-agentowe--ewaluacja-promptów) (1)
+- [Prompt Caching / Zarządzanie kontekstem](#prompt-caching--zarządzanie-kontekstem) (1)
+- [Zarządzanie kontekstem / Compaction w harnessie agenta](#zarządzanie-kontekstem--compaction-w-harnessie-agenta) (1)
 
 ---
 
-## Inżynieria promptów / Systemy agentowe
+## Eval / Zarządzanie zasobami
 
-### Ocena promptów przez wyniki i rework zamiast izolowanej jakości
+### Ekstrapolacja zużycia kwot z próbki 5% zamiast pełnego przebiegu eval
+
+- **Data:** `Wed Sep 16 20:38:57 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100323574791962644)
+- **Rodzaj:** Komentarz w dyskusji (@EthanClinick)
+- **Powiązane pojęcia:** [[Harness|Eval]] [[Harness|Zarządzanie quota]] [[Harness|Próbkowanie i ekstrapolacja]] [[TypeSafe — przewodnik praktyczny|Koszt tokenów]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @EthanClinick w dyskusji o tym, jak mierzyć, ile pełny zestaw eval-i pochłonąłby z tygodniowego quota (limitu tokenów/requestów). Problem: uruchamianie kompletnego evala na 100% budżetu jest kosztowne i niepotrzebne. Rozwiązanie: uruchom eval tylko na 5% tygodniowego quota, zmierz rzeczywiste zużycie tokenów z tej próbki, a następnie przeskaluj liniowo do 100%. Tym samym szacujesz obciążenie produkcyjne bez konieczności wykonywania pełnego przebiegu.
+
+**Rada inżynierska:**
+Do szacowania pełnego obciążenia evalem nie uruchamiaj 100% zakresu — wystarczy reprezentatywna próbka (np. 5% tygodniowego quota). Zmierz rzeczywiste zużycie tokenów na próbce i przeskaluj proporcjonalnie, żeby wyliczyć prognozę dla pełnego przebiegu. Oszczędza to kwotę i czas, a wciąż daje praktyczną estymację budżetu.
+
+**Uwaga / Anty-wzorzec:**
+Mylenie 'przebiegu evala' z 'przebiegiem pełnego quota' — zakładanie, że trzeba realnie zużyć 100% budżetu, żeby zmierzyć, ile on wynosi. To prowadzi do marnowania kwoty i spowalnia iterację nad evalem.
+
+> **Cytat:** *"@EthanClinick the eval runs through 5 whole % of my weekly quota and count the token value from those runs to calculate what 100% would be. it doesn't need to actually run through 100% of it :)"*
+
+---
+
+## Ekonomia agentów / koszt kontekstu
+
+### Koszt agenta jako koszt zatrudnienia CTO — model mentalny uzasadniający zużycie tokenów
+
+- **Data:** `Wed Sep 16 16:36:05 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100262459282239910)
+- **Rodzaj:** Komentarz w dyskusji (@anab7bmessi1)
+- **Powiązane pojęcia:** [[Harness|Ekonomia agentów AI]] [[TypeSafe — przewodnik praktyczny|Koszt tokenów a zwrot z pracy inżynierskiej]] [[Harness|Skalowanie projektu a delegacja do agenta]] [[Harness|Model mentalny agent jako współpracownik]] [[Harness|Harness inżynierski]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada użytkownikowi @anab7bmessi1, który najprawdopodobniej zwrócił uwagę, że używanie agenta (np. harnessu do kodowania) wiąże się z realnym kosztem — zużyciem tokenów, czasu, a być może też narzutem poznawczym. Brak treści posta nadrzędnego, więc kontekst odtwarzany z samej odpowiedzi: toczy się dyskusja o tym, czy wysoki koszt pracy agenta jest akceptowalny. Kun nie neguje kosztu — potwierdza go wprost — ale przenosi rozmowę z poziomu 'ile to kosztuje' na poziom 'jaka wartość jest za to kupowana'.
+
+**Rada inżynierska:**
+Traktuj agenta AI nie jak darmowe narzędzie, ale jak zatrudnienie CTO: koszt jest realny i nieunikniony, ale staje się opłacalny powyżej pewnego progu skali projektu. Praktyczna reguła: nie optymalizuj zużycia tokenów w izolacji — licz je jako inwestycję w redukcję pracy, którą w przeciwnym razie musiałbyś wykonać samodzielnie (czytanie kodu, research, refaktoryzacja, pisanie boilerplate'u). Jeśli dana iteracja agenta oszczędza Ci realne godziny pracy inżynierskiej, jej koszt jest uzasadniony; jeśli nie — to nie jest problem kosztu tokenów, tylko źle dobranego zadania dla agenta.
+
+**Uwaga / Anty-wzorzec:**
+Dwie skrajności, które Kun implicitnie koryguje: (1) oczekiwanie, że agent będzie bez kosztów — prowadzi do rezygnacji z agenta dokładnie wtedy, gdy projekt wchodzi w fazę, w której najbardziej by pomógł; (2) patrzenie wyłącznie na metrykę 'ile tokenów spalił' bez równoległego liczenia 'ile pracy ludzkiej zastąpił', co skutkuje mikro-optymalizacją promptów kosztem jakości wyniku.
+
+> **Cytat:** *"@anab7bmessi1 yes there is absolutely a cost associated
+
+the mental model is that you are hiring a CTO - it’s not free but it’s necessary to help you scale beyond a certain point
+
+most of the tokens it uses are used to reduce work that you would otherwise have to do yourself"*
+
+---
+
+## Architektura harnessu / Routing modeli
+
+### Kwantyfikacja pewności modelu jako trigger do eskalacji na cięższy panel LLM
+
+- **Data:** `Wed Sep 16 05:13:05 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100090575106310498)
+- **Rodzaj:** Komentarz w dyskusji (@nicknow)
+- **Powiązane pojęcia:** [[Jev|Confidence-based routing]] [[Harness|LLM escalation panel]] [[Harness|Model efficiency vs capability]] [[Harness|Model confidence quantification]] [[Harness|Harness architecture]] [[Harness|Cost-aware inference]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @nicknow w dyskusji o nowym modelu (oceniając jego możliwości). Twierdzi, że trudno wyobrazić sobie, by model radził sobie znacząco lepiej niż poprzednie — nawet własne eval producenta wskazują, że główna poprawa dotyczy efektywności, a nie realnego wzrostu jakości rozumowania. Zamiast więc liczyć na 'lepszy model', Kun wskazuje inną wartość: zdolność modelu do kwantyfikowania własnej pewności (confidence). To pozwala zaprojektować harness, który tanie/z lekkim modelem obsługuje sprawy pewne, a przy niskiej pewności eskaluje zadanie do droższego, cięższego panelu LLM.
+
+**Rada inżynierska:**
+Nie opieraj architektury na założeniu, że kolejny model będzie fundamentalnie mądrzejszy — traktuj wzrosty jako głównie efektywnościowe. Buduj harness warstwowo: używaj sygnału confidence z modelu jako bramki routingu. Jeśli wynik ma niską pewność, przekieruj zadanie do cięższego, wielomodelowego panelu (LLM-powered panel), a jeśli pewność jest wysoka — zaakceptuj tani wynik bez eskalacji. Dzięki temu płacisz za drogie rozumowanie tylko tam, gdzie naprawdę trzeba.
+
+**Uwaga / Anty-wzorzec:**
+Oczekiwanie, że sam upgrade modelu rozwiąże problemy produkcyjne. Jeśli eval producenta pokazuje poprawę głównie w efektywności (koszt/latencja), a nie w jakości, to wymiana modelu bez zmiany architektury harnessu nie przyniesie istotnego zysku — trzeba raczej zaprojektować warunkową eskalację opartą na confidence.
+
+> **Cytat:** *"@nicknow it’s hard to imagine it doing better - their own evals also indicate it’s mostly about efficiency
+
+but i like its ability to quantify confidence - i can easily build a system that says “if the result is not confident then let’s run a heavier LLM powered panel”"*
+
+---
+
+## Architektura systemów agentowych / Zarządzanie kosztami
+
+### Tania orkiestracja + eskalacja niejednoznacznych decyzji do modelu top-tier
+
+- **Data:** `Wed Sep 16 05:09:51 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100089760475930830)
+- **Rodzaj:** Komentarz w dyskusji (@Steve_Yegge)
+- **Powiązane pojęcia:** [[Harness|Multi-agent orchestration]] [[Jev|Model routing]] [[Harness|Cost optimization]] [[Harness|Model escalation]] [[Harness|Task decomposition]] [[Harness|Cheap model for orchestration]]
+
+**Kontekst / Problem:**
+Odpowiedź pod wpisem @Steve_Yegge, dotycząca praktyk pracy z systemami multi-agentowymi (odniesienie do 'firstmate' — agenta orkiestrującego). Kun dzieli się obserwacją z miesięcy pracy: systemy agentowe tracą rentowność, gdy wszystkie kroki — w tym rutynową orkiestrację ('task 1 się skończył, uruchom task 2') — wykonuje najdroższy, najmocniejszy model. Rozwiązaniem jest hierarchia modeli: tani model do routingu/orkiestracji, mocny model tylko do decyzji wymagających 'fable level wisdom'.
+
+**Rada inżynierska:**
+Rozdziel role według kosztu i trudności: orkiestrację, routowanie i sekwencjonowanie zadań (np. 'zadanie 1 gotowe → odpal zadanie 2') deleguj do taniego modelu, natomiast model top-tier (fable) rezerwuj wyłącznie dla decyzji niejednoznacznych i wymagających głębokiego rozumowania. Kluczowy element: prompt taniego modelu musi być silnie sterowany (heavily steer) tak, aby sam rozpoznawał granice swojej kompetencji i eskalował w górę. Ta eskalacja świadomie ograniczona do przypadków niejednoznacznych daje dużą poprawę jakości systemu bez psucia ogólnej jakości ani budżetu.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec: używanie modeli top-tier ('fable tier') do rutynowych zadań orkiestracyjnych, które nie wymagają zaawansowanego rozumowania — to główne źródło niekontrolowanych kosztów w systemach agentowych. Drugą pułapką jest eskalacja wszystkiego (brak selektywności) — eskalować należy tylko decyzje niejednoznaczne.
+
+> **Cytat:** *"having been working with my firstmate for months, i learned one of the biggest traps is that we may put fable tier models on many mundane orchestration-ish tasks (like "oh task 1 finished let me kick off task 2") that really don't need fable level wisdom. that's what makes the cost untenable
+
+i'm having great success with using a cheap model for orchestration and heavily steer it to escalate ambiguous decisions to fable, which makes a surprisingly big difference without compromising the overall quality of the system"*
+
+---
+
+## Architektura systemów AI / Routing i orkiestracja
+
+### Model routing i deterministyczne komponenty zamiast „LLM do wszystkiego”
+
+- **Data:** `Wed Sep 16 02:41:33 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100052440343294172)
+- **Rodzaj:** Komentarz w dyskusji (@EthanSDE)
+- **Powiązane pojęcia:** [[Jev|Model routing]] [[Harness|Escalation judgment]] [[Code Review|Triage code review]] [[Firstmate Agent|Deterministyczna orkiestracja]] [[Harness|Zużycie tokenów]] [[TypeSafe — przewodnik praktyczny|Latencja agenta]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @EthanSDE, potwierdzając („yes! many many examples”), że istnieje wiele miejsc w systemach agentowych, gdzie nie trzeba używać LLM. Wymienia konkretne przypadki: routing modeli (model routing), ocena konieczności eskalacji (escalation judgment) oraz triage wyników code review. Kontekst: dyskusja o tym, które elementy harnessu/agenta powinny być deterministyczne, a które oparte na modelu.
+
+**Rada inżynierska:**
+Nie wkładaj LLM w każdy krok pipeline'u. Routing między modelami, decyzja o eskalacji do mocniejszego modelu/człowieka oraz triage znalezisk z code review mogą być realizowane regułowo lub deterministycznie — to tańsze i szybsze. Traktuj LLM jako jeden z komponentów orkiestracji, nie jako domyślny mechanizm dla wszystkich decyzji.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec „LLM for everything” — używanie modelu nawet do trywialnych decyzji klasyfikacyjnych/routingowych, co drastycznie pali tokeny i wprowadza ogromne opóźnienia („burns tokens and is super slow”), czyniąc system niepraktycznym w produkcji.
+
+> **Cytat:** *"yes! many many examples - model routing, escalation judgment, triaging code review findings etc etc
+
+right now it’s LLM for everything which burns tokens and is super slow"*
+
+---
+
+## Ewaluacja agentów / Architektura orkiestracji
+
+### Ewaluacja systemów agentowych przez outcome i wskaźnik rework, nie przez jakość promptu
 
 - **Data:** `Tue Sep 22 07:10:43 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102294506062385364)
 - **Rodzaj:** Komentarz w dyskusji (@kryptm4n)
-- **Powiązane pojęcia:** [[Prompt Architecture]] [[Firstmate Agent|Agent Orchestration]] [[Firstmate i Agenci Wykonawczy|Leaf Node Agent]] [[Firstmate Agent|Firstmate]] [[Rework Rate]] [[Prompt Architecture|Iterative Prompting]] [[Firstmate i Agenci Wykonawczy|Tradeoff skalowania]]
+- **Powiązane pojęcia:** [[Firstmate Agent|Orkiestracja agentów]] [[Firstmate Agent|Firstmate]] [[Harness|Ewaluacja przez outcome]] [[Rework Rate|Wskaźnik reworku]] [[Firstmate i Agenci Wykonawczy|Leaf node agent]] [[Harness|Skalowalność vs kontrola]] [[Harness|Misalignment agentów]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada na pytanie o ocenę jakości promptów w kontekście agentów. Wyjaśnia, że bezpośrednia rozmowa z agentem (leaf node) jest iteracyjna i nie da się jej porównać do pojedynczego promptu pisanego przez orkiestratora (firstmate). Zamiast tego proponuje oceniać wyniki i częstotliwość poprawek (rework). Dzieli się obserwacją o kompromisie: bezpośrednie sterowanie daje lepsze rezultaty szybciej, ale nie skaluje się; firstmate skaluje, lecz czasem wymaga korekt.
+Kun Chen odpowiada @kryptm4n, który prawdopodobnie zapytał o porównanie jakości promptów pisanych ręcznie (bezpośrednio do agenta-liścia) z promptami generowanymi automatycznie przez 'firstmate' (jego system orkiestracji agentów). Problem: jak zmierzyć, czy automatycznie tworzone prompty są równie dobre jak te pisane przez człowieka.
 
 **Rada inżynierska:**
-Nie oceniaj jakości promptów w izolacji, zwłaszcza gdy pracujesz iteracyjnie z agentem. Zamiast tego mierz wynik końcowy i częstotliwość reworku (poprawek). Pamiętaj o tradeoffie: bezpośrednia iteracja z leaf node agentem daje lepszą kontrolę i szybsze rezultaty, ale nie skaluje się; użycie orkiestratora (np. firstmate) skaluje, ale może powodować niedopasowanie wymagań i konieczność późniejszych korekt.
+Nie da się rzetelnie porównać jakości promptu pisanego iteracyjnie z człowiekiem do jednorazowego promptu wygenerowanego przez system orkiestracji (firstmate), bo to nie są porównywalne artefakty — rozmowa z agentem-liściem to seria drobnych promptów z bieżącym sterowaniem, a nie jeden 'pełny wymóg'. Zamiast tego ewaluuj OUTCOME i częstość reworku (ile razy trzeba wracać i poprawiać). Praktyczna reguła: mierz skalowalność i koszt korekty, nie elegancję promptu. Świadomy tradeoff: bezpośrednie sterowanie agentem-liściem = lepsza kontrola i szybszy rezultat, ale nie skaluje się (pożera czas); orkiestracja (firstmate) = skaluje się, ale sporadycznie generuje misalignment wymagający późniejszej korekty. To ten sam tradeoff co zarządzanie dużą organizacją ludzką vs robienie wszystkiego samemu.
 
 **Uwaga / Anty-wzorzec:**
-Próba oceny pojedynczego promptu w podejściu iteracyjnym jest myląca, ponieważ nie masz jednego 'promptu' do porównania. Brak kwantyfikacji reworku utrudnia obiektywną ocenę. Zakładanie, że orkiestrator zawsze napisze idealny prompt, prowadzi do niedopasowań i kosztownych poprawek.
+Anty-wzorzec: ocenianie systemu orkiestracji agentów przez pryzmat 'jakości promptu' — prowadzi to do porównywania nieporównywalnych rzeczy (iteracyjna rozmowa vs jednorazowy wygenerowany prompt) i daje mylące wnioski. Drugi anty-wzorzec: brak kwantyfikacji wskaźnika reworku, przez co decyzja 'ręcznie vs orkiestracja' opiera się wyłącznie na wrażeniach jakościowych.
 
 > **Cytat:** *"this is a very good question and i have not done a dedicated evaluation on just the quality of the prompts
 
-it’s tricky because when i talk directly to a leaf node agent i don’t attempt to write a full requirement upfront and expect autonomous execution. i typically end up doing it a lot more iteratively, so often times i don’t have a single “prompt” that’s comparable to what firstmate would write
+it's tricky because when i talk directly to a leaf node agent i don't attempt to write a full requirement upfront and expect autonomous execution. i typically end up doing it a lot more iteratively, so often times i don't have a single "prompt" that's comparable to what firstmate would write
 
-i think what’s more practical is to evaluate the outcome, and how often rework happens. i haven’t quantified this but it’s a good thing to look into. qualitatively i definitely think whenever i directly talk to a leaf node agent i can steer it more closely and get better results faster - but i end up spending a lot of time and it doesn’t scale. firstmate helps me scale but occasionally there will be misalignment and needs correction later on. much like  the tradeoff between managing a large human organization vs doing everything myself"*
+i think what's more practical is to evaluate the outcome, and how often rework happens. i haven't quantified this but it's a good thing to look into. qualitatively i definitely think whenever i directly talk to a leaf node agent i can steer it more closely and get better results faster - but i end up spending a lot of time and it doesn't scale. firstmate helps me scale but occasionally there will be misalignment and needs correction later on. much like the tradeoff between managing a large human organization vs doing everything myself"*
 
 ---
 
-## Praktyki weryfikacji / Code Review
+## Harness / Narzędzia i konfiguracja
 
-### Heurystyka stosowania 'no-mistakes' – kiedy potrzebny przegląd kodu
+### Ograniczenia klientów przy podłączaniu własnego harnessu (Cursor vs SuperGrok)
+
+- **Data:** `Tue Sep 22 03:40:58 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102241720826204224)
+- **Rodzaj:** Komentarz w dyskusji (@tanishqk)
+- **Powiązane pojęcia:** [[Harness]] [[Harness|Third-party harness]] [[Harness|Cursor]] [[Stabilność modeli i przestrzeganie promptu|SuperGrok]] [[Harness|Wybór dostawcy modelu]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @tanishqk w wątku o używaniu własnego (zewnętrznego) harnessu wokół modeli. Wskazuje praktyczne ograniczenie: klient Cursor nie pozwala na podłączenie trzeciej strony / własnego harnessu (3p harness), natomiast subskrypcje SuperGrok na to pozwalają — sam używa własnego harnessu właśnie przez subskrypcję SuperGrok.
+
+**Rada inżynierska:**
+Dobór klienta/subskrypcji jest decyzją architektoniczną, nie tylko kosztową: jeśli chcesz uruchamiać własny harness (własne pętle agentowe, zewnętrzni weryfikatorzy, kontrola nad prompt architecture), wybierz dostawcę, który nie blokuje third-party harnessu. Cursor tego nie umożliwia, a subskrypcje SuperGrok tak — Kun realnie korzysta z tego drugiego kanału.
+
+**Uwaga / Anty-wzorzec:**
+Zakładanie, że dowolny popularny klient IDE/agent (np. Cursor) pozwoli podłączyć własny harness lub zewnętrzny model pod własną pętlą — ograniczenia licencyjne i klienckie mogą to uniemożliwić i zablokować całą strategię harnessu po fakcie.
+
+> **Cytat:** *"@tanishqk cursor doesn't allow 3p harness but supergrok subs do. i'm using through my supergrok"*
+
+---
+
+## Harnessy i weryfikacja krokowa
+
+### Per-repo polityka jakości w harnessie Firstmate: brak-mistakes vs no-mistakes
+
+- **Data:** `Tue Sep 22 03:32:12 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102239513980608520)
+- **Rodzaj:** Komentarz w dyskusji (@kunchenguid)
+- **Powiązane pojęcia:** [[Harness]] [[Weryfikacja krokowa]] [[Weryfikator|Zewnętrzny weryfikator]] [[Harness|Quality gates per-repo]] [[Harness|Polityka jakości agentów]] [[Firstmate Agent|Firstmate]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @EthanClinick w wątku o narzędziu 'Firstmate' (harness/agent sterujący pracą w wielu repozytoriach). Ethan prawdopodobnie pytał, czy da się zróżnicować poziom rygoru weryfikacji między repo (np. część repo wymaga pełnej weryfikacji 'no-mistakes', część nie). Kun wyjaśnia, że Firstmate pozwala zadeklarować per-repo, które repozytoria mają podlegać trybowi 'no-mistakes', a które nie — i że harness sam potrafi skonfigurować te reguły za użytkownika.
+
+**Rada inżynierska:**
+Traktuj politykę jakości jako konfigurację per-repository, nie globalną. W praktyce: część repozytoriów (np. produkcyjne, krytyczne, o wysokim koszcie błędu) powinna działać w trybie 'no-mistakes' — czyli agent musi przejść rygorystyczną, zewnętrzną weryfikację każdego kroku, zanim zmiana zostanie uznana za gotową. Inne repo (prototypy, sandboxy, kod jednorazowy) mogą działać w lżejszym trybie, żeby nie marnować tokenów i czasu na weryfikację tam, gdzie błąd jest tani. Kluczowe: pozwól harnessowi generować i utrzymywać te reguły automatycznie (self-setup), zamiast ręcznie utrzymywać listy w konfiguracji — ręczne listy się rozjeżdżają wraz ze zmianami w repo i zespołu.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec: jedna, globalna polityka weryfikacji dla wszystkich repozytoriów. Albo wymuszasz 'no-mistakes' wszędzie (marnujesz czas i budżet na repo, gdzie to nie jest potrzebne), albo nigdzie (wypuszczasz niezweryfikowane zmiany w krytycznych repo). Drugi anty-wzorzec: ręczne, hardkodowane listy repo wymagających weryfikacji — szybko stają się nieaktualne, gdy pojawiają się nowe repo lub zmienia się ich krytyczność.
+
+> **Cytat:** *"@EthanClinick in firstmate, you can also tell firstmate which repos need no-mistakes vs not. it can setup the rules for you"*
+
+---
+
+## Weryfikacja / Proces inżynierski
+
+### Kiedy stosować rygorystyczną weryfikację: test "czy poprosiłbym człowieka o code review?"
 
 - **Data:** `Tue Sep 22 03:31:40 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102239379536433551)
 - **Rodzaj:** Komentarz w dyskusji (@EthanClinick)
-- **Powiązane pojęcia:** [[Weryfikacja krokowa]] [[Code Review]] [[Harness|Heurystyki inżynierskie]] [[Code Review|AI Code Review]]
+- **Powiązane pojęcia:** [[Weryfikacja krokowa]] [[Harness|Harness inżynierski]] [[Weryfikator|Zewnętrzny weryfikator]] [[Code Review|Code review]] [[Harness|Selektywna weryfikacja zmian]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada na pytanie @EthanClinick, prawdopodobnie czy każda zmiana w kodzie wymaga użycia 'no-mistakes' (narzędzia/procesu weryfikacji). Wyjaśnia, że nie każda – podaje prostą heurystykę decyzyjną.
+Kun Chen odpowiada @EthanClinick, który najwyraźniej sugerował, że każdej zmianie w kodzie należy poddawać rygorystyczny proces weryfikacji (prawdopodobnie narzędzie/harness "no-mistakes"). Kun prostuje to założenie: nie każda zmiana wymaga pełnej, kosztownej weryfikacji. Wprowadza prostą heurystykę decyzyjną opartą na analogii do ludzkiego procesu code review, aby uniknąć nadmiernego narzutu na trywialne zmiany.
 
 **Rada inżynierska:**
-Nie każda zmiana wymaga dodatkowej weryfikacji (np. AI code review / 'no-mistakes'). Zadaj sobie pytanie: 'Czy poprosiłbym innego człowieka o code review tej zmiany?' Jeśli odpowiedź brzmi 'nie', to prawdopodobnie nie potrzebujesz 'no-mistakes'. Stosuj weryfikację selektywnie, proporcjonalnie do ryzyka i złożoności zmiany.
+Przed uruchomieniem kosztownego procesu weryfikacji (harness, zewnętrzny weryfikator, agent sprawdzający) zadaj sobie pytanie: "Czy poprosiłbym innego człowieka o code review tej zmiany?". Jeśli odpowiedź brzmi NIE — najprawdopodobniej nie potrzebujesz pełnego, rygorystycznego trybu weryfikacji. Skaluj intensywność weryfikacji do ryzyka i złożoności zmiany, a nie stosuj maksymalny rygor do wszystkiego.
 
 **Uwaga / Anty-wzorzec:**
-Automatyczne uruchamianie weryfikacji/AI code review dla każdej, nawet błahej zmiany – marnuje zasoby, spowalnia proces i może prowadzić do zmęczenia weryfikacją (alert fatigue). Brak selektywności w stosowaniu narzędzi weryfikacyjnych.
+Anty-wzorzec: bezwarunkowe stosowanie najcięższego trybu weryfikacji (np. "no-mistakes") do KAŻDEJ zmiany, w tym trywialnych (literówki, drobne poprawki). To marnuje czas, tokeny i uwagę, a także zaciera sygnał — gdy wszystko jest weryfikowane rygorystycznie, przestajemy odróżniać zmiany faktycznie ryzykowne od rutynowych.
 
 > **Cytat:** *"no - not every change! i talked about this in more depth in my latest video but tl;dr is you can ask yourself "would i ask another human to do code review for this change" and if the answer is no, then you probably don't need no-mistakes"*
 
 ---
 
-## Obserwacje zachowania modeli / Prompt Architecture
+## Wybór harnessu / routing modeli
 
-### Grok 4.7: ścisłe trzymanie się system promptu, stabilność vs 'spiky' modele i konserwatyzm w działaniu
+### Używaj Pi dla modeli innych niż Anthropic
 
-- **Data:** `Tue Sep 22 03:11:03 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102234191639257399)
-- **Rodzaj:** Wpis autorski
-- **Powiązane pojęcia:** [[Stabilność modeli i przestrzeganie promptu|System Prompt Fidelity]] [[Stabilność modeli i przestrzeganie promptu|Model Stability vs Spikiness]] [[Stabilność modeli i przestrzeganie promptu|Benchmarki są bezużyteczne]] [[Stabilność modeli i przestrzeganie promptu|Konserwatywne zachowanie agenta]] [[Interpretable Context Methodology|Human-in-the-loop]] [[TypeSafe — przewodnik praktyczny|Koszt i latencja modelu]] [[Firstmate Agent|Firstmate]]
+- **Data:** `Tue Sep 22 03:30:29 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102239083678650816)
+- **Rodzaj:** Komentarz w dyskusji (@tanishqk)
+- **Powiązane pojęcia:** [[Harness]] [[Jev|Model routing]] [[Harness|Anthropic]] [[Harness|Claude Code]] [[Harness|Pi]] [[Harness|Tool calling]]
 
 **Kontekst / Problem:**
-Kun Chen opisuje jednodniowe obserwacje z Grok 4.7 używanym jako jego 'firstmate' (agent główny). Odnosi się do dwóch typów doniesień, które odrzuca: (1) raportów opartych wyłącznie na publicznych benchmarkach, (2) porównań modeli przez pryzmat gier 3D. Zamiast tego podaje jakościowe różnice behawioralne zaobserwowane w realnej pracy produkcyjnej.
+Odpowiedź Kuna Chena na wpis @tanishqk. Brak treści posta nadrzędnego, ale z odpowiedzi wynika, że rozmowa dotyczyła wyboru harnessu/narzędzia do pracy z modelami. Kun dzieli się regułą: Anthropic obsługuje w swoim ekosystemie, a każdy inny model uruchamia przez Pi.
 
 **Rada inżynierska:**
-Oceniaj modele wyłącznie na podstawie realnej pracy, nie benchmarków ani demówek (gry 3D). Kluczowa różnica Grok 4.7: bardzo wiernie wykonuje system prompt — ujawnia zachowania, które były w prompcie, ale inne modele nie egzekwowały ich na tyle konsekwentnie, by stały się widoczne (np. żądanie wskazania konkretnych czerwonych checków CI do pominięcia, odmowa prostego 'yolo'). To znaczy, że dobrze zaprojektowany system prompt zaczyna realnie działać dopiero na modelu o wysokiej wierności instrukcjom. Preferuj modele 'stabilne' (przewidywalne, bez dużych wahań) nad 'spiky' (genialne momenty przeplatane głupimi wpadkami) — przewidywalność buduje zaufanie szybciej niż okazjonalny błysk.
+Dopasuj harness do dostawcy modelu: dla modeli Anthropic używaj narzędzi z ekosystemu Anthropic (np. Claude Code), a dla wszystkich pozostałych modeli używaj Pi. Nie zakładaj, że jeden harness jest optymalny dla każdego modelu — provider-specific tooling ma znaczenie.
 
 **Uwaga / Anty-wzorzec:**
-Dwa anty-wzorce: (1) wyciąganie wniosków o modelu z publicznych benchmarków — te same benchmarki twierdziły, że Opus 5 jest lepszy od Fable, co Kun uznaje za bezwartościowe; (2) porównywanie modeli przez zabawkowe zadania (gry 3D) — to nie jest prawdziwa praca, a jedynie materiał pod uwagę na social media. Dodatkowo: model konserwatywny (pytający przed działaniem) bywa uciążliwy, ale w praktyce wiele z tych pytań dotyczy rzeczywiście niejednoznacznych przypadków — wymuszanie 'idź dalej bez pytania' może być błędem. Uwaga też na koszt: Grok 4.7 jest wolniejszy i wyraźnie szybciej zużywa limit niż 4.5.
+Traktowanie jednego harnessu jako uniwersalnego dla wszystkich modeli. Różnice w tool-callingu, formatowaniu promptów i obsłudze kontekstu między dostawcami mogą powodować gorsze wyniki, jeśli nie dobierzesz narzędzia do modelu.
 
-> **Cytat:** *"ignore the reports that say "it's terrible" and the only thing they reference is a public benchmark. the same benchmarks told us opus 5 was better that fable - they are useless. also ignore the reports that compare models with 3d games - that's not real work. it's made for attention on social media ... 1. it follows system prompt very, very closely ... i traced it and it's indeed how i instructed it in firstmate's system prompt, but none of the other models followed it closely enough to make this behavior visible - grok 4.7 is the first to pick that up ... 2. it's very "stable" ... if you've used astra then you know what a "spiky" model is. it can have some genius moments but you occasionally also wonder "how could it be so dumb and doesn't get me". grok 4.7 is the opposite of that ... 3. it's a conservative model. it doesn't like to take actions without asking, and would explicitly say so ... 4. it's a bit slower and costs more than 4.5, visibly."*
+> **Cytat:** *"@tanishqk i use pi for any model that's not anthropic"*
 
 ---
 
-## Orkiestracja multi-agentowa / Routing
+## Obserwacje zachowania modeli / Ewaluacja modeli
 
-### Dedykowany router (Jev) zamiast decyzji routingowej podejmowanej przez LLM orkiestratora
+### Grok 4.7 jako firstmate: ścisłe trzymanie się system promptu, stabilność i konserwatyzm kosztem szybkości
+
+- **Data:** `Tue Sep 22 03:11:03 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2102234191639257399)
+- **Rodzaj:** Wpis autorski
+- **Powiązane pojęcia:** [[Stabilność modeli i przestrzeganie promptu|System Prompt]] [[Harness]] [[Firstmate Agent|Firstmate]] [[Harness|Ewaluacja modeli]] [[Stabilność modeli i przestrzeganie promptu|Benchmarki]] [[Harness|Stabilność modelu]] [[Harness|Konserwatyzm agenta]] [[TypeSafe — przewodnik praktyczny|Koszty tokenów]] [[Harness|Zaufanie do agenta]]
+
+**Kontekst / Problem:**
+Kun Chen opisuje pierwszy dzień pracy z Grok 4.7 jako swoim 'firstmate' (głównym agentem-harnessem w codziennej pracy inżynierskiej). Kontekst: w sieci pojawiły się raporty 'it's terrible' oparte wyłącznie o publiczne benchmarki oraz porównania modeli przez pryzmat generowania gier 3D. Kun odrzuca oba źródła jako bezwartościowe i proponuje ocenę jakościową z realnej, całodniowej pracy. To wpis ewolucyjny: Kun wprost pomija Grok 4.6 (bo 4.5 działał mu lepiej) i porównuje 4.7 do 4.5, co pokazuje, że jego stan wiedzy o modelach zmienia się wraz z doświadczeniem produkcyjnym, a nie z numeracją wersji.
+
+**Rada inżynierska:**
+Oceniaj modele wyłącznie na podstawie realnej, całodniowej pracy w swoim harnessie, nie na podstawie publicznych benchmarków ani dem typu 'model zrobił grę 3D'. Benchmarki są bezużyteczne (przykład: wskazywały Opus 5 jako lepszy od Fable, co nie pokrywa się z praktyką). Najbardziej wartościowy sygnał jakościowy to ścisłość trzymania się system promptu: Grok 4.7 jako pierwszy uwidocznił instrukcje, których żaden inny model wcześniej nie egzekwował (np. żądanie wskazania konkretnych czerwonych checków CI do pominięcia i odmowa prostego 'yolo'). Oznacza to, że warto pisać system prompty z myślą o modelach zdolnych je w pełni egzekwować – dopiero taki model ujawnia, że instrukcje w ogóle działają. Stabilność i przewidywalność (brak 'spikiness') buduje zaufanie szybciej niż pojedyncze momenty geniuszu.
+
+**Uwaga / Anty-wzorzec:**
+Dwie pułapki: (1) wyciąganie wniosków o modelu z publicznych benchmarków i viralowych dem (gry 3D) – to nie jest realna praca, a rozbieżność z praktyką bywa dramatyczna; (2) zakładanie, że model z większym numerem wersji jest lepszy – Kun celowo pomija Grok 4.6, bo 4.5 działał mu lepiej, co pokazuje, że numeracja nie implikuje regresji ani progresu. Dodatkowo: model konserwatywny (pytający o zgodę) bywa postrzegany jako spowolnienie, ale w wielu przypadkach brak potwierdzenia prowadziłby do niepożądanych akcji – pozornie oczywiste 'yes i do want that' jest często uzasadnione, bo intencja była rzeczywiście niejednoznaczna.
+
+> **Cytat:** *"it follows system prompt very, very closely ... i traced it and it's indeed how i instructed it in firstmate's system prompt, but none of the other models followed it closely enough to make this behavior visible - grok 4.7 is the first to pick that up ... 2. it's very "stable" ... if you've used astra then you know what a "spiky" model is ... grok 4.7 is the opposite of that ... 3. it's a conservative model ... it doesn't like to take actions without asking, and would explicitly say so ... 4. it's a bit slower and costs more than 4.5, visibly"*
+
+---
+
+## Architektura systemów / Wybór modelu (LLM vs klasyczne ML)
+
+### Dlaczego klasyczny klasyfikator nie zastąpi LLM przy kategoriach definiowanych przez użytkownika
+
+- **Data:** `Thu Sep 17 15:35:36 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100609623531421915)
+- **Rodzaj:** Komentarz w dyskusji (@winterspeak)
+- **Powiązane pojęcia:** [[Harness|LLM jako klasyfikator]] [[Harness|Zero-shot classification]] [[Harness|User-defined taxonomy]] [[Harness|Kiedy nie trenować klasyfikatora]] [[Harness|Dynamiczne etykiety w promptcie]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada użytkownikowi @winterspeak, który najprawdopodobniej zasugerował, że problem poruszany w jego narzędziu (najpewniej automatyczne kategoryzowanie/etykietowanie treści, np. wpisów czy notatek) to zwykłe zadanie klasyfikacyjne, które można rozwiązać tradycyjnym klasyfikatorem ML. Kun prostuje to założenie, wyjaśniając naturę swojego use case'u.
+
+**Rada inżynierska:**
+Gdy kategorie są definiowane przez użytkownika i są w pełni dowolne (freeform), klasyczne podejście ML jest niewykonalne z dwóch powodów: (1) nie da się wytrenować jednego uniwersalnego klasyfikatora pokrywającego nieskończoną przestrzeń etykiet wszystkich użytkowników, (2) nie można wymagać, aby każdy użytkownik trenował własny model. W takich przypadkach właściwym narzędziem jest LLM działający zero-shot/few-shot, ponieważ przyjmuje definicje kategorii jako część promptu (kontekst), a nie jako wagi modelu. Reguła projektowa: zanim sięgniesz po trening klasyfikatora, sprawdź czy przestrzeń etykiet jest zamknięta i stabilna — jeśli jest otwarta i zależna od użytkownika, klasyfikacja musi być promptowana, nie trenowana.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec: traktowanie każdego zadania przypisania etykiety jako problemu uczenia nadzorowanego ("to przecież tylko klasyfikacja"). Prowadzi to do projektowania pipeline'u treningowego, którego nie da się utrzymać przy dynamicznych, per-użytkownik etykietach — koszt oznaczonego data setu rośnie liniowo z liczbą użytkowników, a model i tak nie generalizuje na nowe kategorie.
+
+> **Cytat:** *"not exactly - if you think about the use case i have here, the categories are user-defined and completely freeform
+
+there’s no way i can train a traditional classifier that will work for every user, and there’s no way every user will train their own classifier"*
+
+---
+
+## Weryfikacja / Agent Harness
+
+### Kwantyfikacja confidence w Jev jako filtr niepewnych odpowiedzi
+
+- **Data:** `Thu Sep 17 15:29:09 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100608000042127434)
+- **Rodzaj:** Komentarz w dyskusji (@PremiumGoblin)
+- **Powiązane pojęcia:** [[Harness|Confidence gating]] [[Jev]] [[Harness|Ambiguity in requirements]] [[Harness|Agent Harness]] [[Harness|Low-confidence outputs]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada na wpis @PremiumGoblin, najprawdopodobniej dotyczący tego, czy dobrze zdefiniowane wymagania rozwiązują problem niejednoznaczności w implementacji. Kun zgadza się tylko częściowo: ocena, czy wymagania są wystarczająco dobrze określone i ile niejednoznaczności pozostaje w fazie implementacji, jest trudna. Wskazuje, że narzędzie Jev pomaga, bo kwantyfikuje confidence, co pozwala odrzucać odpowiedzi, gdy model nie jest pewny.
+
+**Rada inżynierska:**
+Nie zakładaj, że wymagania zawsze da się w pełni doprecyzować przed implementacją — ocena poziomu niejednoznaczności bywa trudna. Zamiast polegać wyłącznie na ludzkim osądzie, używaj skwantyfikowanego confidence z Jev: jeśli odpowiedź nie ma wystarczającej pewności, odrzuć ją zamiast przyjmować do dalszego przetwarzania.
+
+**Uwaga / Anty-wzorzec:**
+Traktowanie „well-defined requirements” jako uniwersalnego rozwiązania problemu niejednoznaczności oraz brak progu odrzucania odpowiedzi o niskim confidence — prowadzi to do przepuszczania niepewnych, potencjalnie błędnych wyników do implementacji.
+
+> **Cytat:** *"not always - but for some cases yes, the judgment on whether requirements are “well defined” enough and how much ambiguity still exists during the implementation phase is not easy to answer
+
+the extra nice thing about jev is that it quantifies the confidence, so i can say “if it’s not confident the i discard its answer”"*
+
+---
+
+## Orkiestracja agentów / Architektura kontekstu
+
+### Kontekst wejściowy dla sub-agenta = task brief + reguły dispatchu + quota data
+
+- **Data:** `Thu Sep 17 07:59:19 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100494796687340001)
+- **Rodzaj:** Komentarz w dyskusji (@ArtifexPraxis)
+- **Powiązane pojęcia:** [[Harness|Task brief]] [[Harness|Multi-agent orchestration]] [[Harness|Kontekst wejściowy agenta]] [[Harness|Dispatch rules]] [[Harness|Quota i rate limiting w agentach]] [[Harness|Delegacja zadań w harnessie]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @ArtifexPraxis w wątku o systemie orkiestracji agentów (firstmate → crewmate). Wyjaśnia, jak składa się kontekst wejściowy dla agenta-decydenta o imieniu 'Jev' w momencie podejmowania decyzji o delegowaniu zadania. Zamiast wrzucać surowy prompt użytkownika, system najpierw wymusza wygenerowanie artefaktu pośredniego (task brief), który dopiero razem z politykami i danymi operacyjnymi trafia do modelu.
+
+**Rada inżynierska:**
+Buduj kontekst dla agenta delegującego (routera/dyspozytora), a nie tylko dla wykonawcy. Sprawdzony wzorzec: (1) task brief — zwięzły, wygenerowany przez orkiestratora opis zadania wystarczający do samodzielnej realizacji; (2) dispatch rules — reguły użytkownika, kto/co/kiedy ma być zaangażowane; (3) quota data — dane o limitach/zużyciu budżetu lub rate limitach. Ten trójskładnikowy kontekst jest wejściem dopiero do decyzji o delegacji, co oddziela 'co zrobić' (brief) od 'jak dysponować zasobami' (rules + quota). Wymuszenie zapisu task briefu przed dispatchem daje też darmową weryfikację: jeśli briefu nie da się napisać jednoznacznie, zadanie jest źle zdefiniowane i nie należy go delegować.
+
+**Uwaga / Anty-wzorzec:**
+Przekazywanie surowego promptu użytkownika bezpośrednio do sub-agenta bez pośredniego task briefu i bez reguł dispatchu/quota — prowadzi do delegacji źle zdefiniowanych zadań, przekroczeń limitów i braku audytowalności decyzji o routingu.
+
+> **Cytat:** *"@ArtifexPraxis when firstmate is about to dispatch a crewmate to do a task, it first has to write a task brief anyway
+
+that task brief + the user's dispatch rules + the user's quota data = input context to Jev here"*
+
+---
+
+## Architektura harnessa / Routing i selekcja modeli
+
+### Routing modeli z uwzględnieniem pozostałego zapasu quota (quota runway)
+
+- **Data:** `Thu Sep 17 07:28:21 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100487003431477661)
+- **Rodzaj:** Komentarz w dyskusji (@taras_korn)
+- **Powiązane pojęcia:** [[Jev|Model Routing]] [[Harness|Quota Management]] [[Harness]] [[Harness|Agentic Workflow]] [[Harness|Rate Limiting]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @taras_korn, który najprawdopodobniej zapytał, czy mechanizm automatycznego wyboru modelu w jego harnessie/agenci bierze pod uwagę limity quota (np. zużycie API, rate limity subskrypcji). Odpowiedź precyzuje, że selekcja modelu już uwzględnia ten czynnik — algorytm wybiera model z największym dostępnym zapasem limitu, a nie wyłącznie według jakości lub kosztu.
+
+**Rada inżynierska:**
+Przy automatycznym wyborze modelu w harnessie nie kieruj się tylko zdolnościami lub ceną — dodaj 'quota runway' jako wymiar decyzyjny: wybieraj model, który ma największy pozostały zapas limitu, tak aby długie zadanie agentowe nie zostało przerwane w połowie przez wyczerpanie quota. Zapobiega to blokadzie całego runu i wymusza płynne przełączanie między modelami o różnych limitach.
+
+**Uwaga / Anty-wzorzec:**
+Routing modelu wyłącznie po jakości (np. zawsze najsilniejszy model) lub po koszcie, bez śledzenia pozostałego zapasu limitu — prowadzi do wyczerpania quota w trakcie wieloetapowego zadania, przerwania pracy agenta i konieczności restartu lub fallbacku w najgorszym momencie.
+
+> **Cytat:** *"@taras_korn it already takes quota into consideration. it will pick the model with the most quota runway available"*
+
+---
+
+## Architektura systemów agentowych / Optymalizacja kosztów
+
+### Zastępowanie wywołań LLM logiką deterministyczną + lekkim decydentem (Jev) — architektura hybrydowa zamiast pętli agentowych
+
+- **Data:** `Thu Sep 17 06:45:30 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100476218512748616)
+- **Rodzaj:** Komentarz w dyskusji (@v10se)
+- **Powiązane pojęcia:** [[Harness|Pętla agentowa]] [[Harness|Architektura hybrydowa]] [[Harness|Logika deterministyczna]] [[TypeSafe — przewodnik praktyczny|Redukcja kosztów LLM]] [[Jev]] [[Harness|Decydent lekki vs LLM]] [[Harness|Generacja treści a rozumowanie]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @v10se w wątku o implikacjach nowego podejścia (najpewniej lekkiego modelu/komponentu decyzyjnego 'Jev', który przejmuje część zadań dotąd realizowanych przez duże LLM-y). Kontekst: dyskusja o tym, co realnie zmienia możliwość obsłużenia części zadań bez wywołania dużego modelu. Kun wskazuje, że większość osób widzi tylko oczywistą korzyść kosztową, a pomija istotniejszą konsekwencję architektoniczną — przymus przemyślenia projektu oprogramowania. Standardem stały się pętle agentowe budowane wokół LLM; nowy komponent pozwala wrócić do rozdzielenia odpowiedzialności: logika deterministyczna (kod), podejmowanie decyzji (Jev), sporadyczna generacja treści (LLM).
+
+**Rada inżynierska:**
+Rozdzielaj trzy warstwy zamiast wrzucać wszystko do pętli agentowej: (1) logika deterministyczna = zwykły kod (tanio, przewidywalnie, testowalnie), (2) inteligentne podejmowanie decyzji = lekki, wyspecjalizowany komponent decyzyjny (Jev) zamiast pełnego LLM-a, (3) generacja treści = LLM wywoływany okazjonalnie, tylko tam, gdzie naprawdę potrzebna jest swoboda językowa. Traktuj redukcję kosztów jako efekt uboczny — główną wartością jest wymuszenie lepszej architektury. Każde wywołanie LLM, które da się zastąpić deterministycznym kodem lub tanim decydentem, jest kandydatem do usunięcia z pętli.
+
+**Uwaga / Anty-wzorzec:**
+Domyślne budowanie pętli agentowej wokół LLM-a dla każdego zadania — to prowadzi do nadmiarowych kosztów i niepotrzebnej niedeterministyczności. Pomijanie warstwy deterministycznej i zlecanie LLM-owi zadań, które są w istocie regułami lub klasyfikacją, to anty-wzorzec. Drugą pułapką jest widzenie wyłącznie oszczędności kosztowej i przegapienie, że nowy komponent zmienia sposób projektowania całego systemu.
+
+> **Cytat:** *"right now i'm seeing two - the most obvious implication is cost reduction. it's a massive saving whenever we can replace LLM calls with this the non-obvious one is that it forces us to think about our software differently. LLMs make us all build agent loops. this enables us to explore a different architecture - a combination of deterministic logic (code), intelligent decision making (Jev), and occasional generation of content (LLM)"*
+
+---
+
+## Paradygmaty budowania oprogramowania z AI
+
+### Jev nie zastępuje LLM-ów — wymaga nowego paradygmatu budowania oprogramowania
+
+- **Data:** `Thu Sep 17 06:26:13 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100471365912707312)
+- **Rodzaj:** Komentarz w dyskusji (@janpfranke)
+- **Powiązane pojęcia:** [[Jev]] [[Harness|LLM]] [[Harness|Paradygmat budowania oprogramowania]] [[Harness|Drop-in replacement]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @janpfranke w wątku o narzędziu 'Jev'. Kontekst: dyskusja o tym, czy Jev jest kolejnym zamiennikiem/alternatywą dla LLM-ów w procesie tworzenia oprogramowania. Kun prostuje to założenie — Jev nie jest substytutem LLM-ów, lecz innym podejściem do budowania softu, którego implikacje inżynierskie nie są jeszcze w pełni przemyślane.
+
+**Rada inżynierska:**
+Nie traktuj nowych narzędzi AI (np. Jev) jako drop-in replacement dla LLM-ów ani jako 'lepszego promptu'. To osobny paradygmat budowania oprogramowania — jego adopcja wymaga przeprojektowania sposobu myślenia o architekturze, przepływie pracy i roli modelu, a nie tylko podmiany komponentu. Kun otwarcie przyznaje, że sam nie przepracował jeszcze wszystkich implikacji, co sugeruje: wdrażaj eksperymentalnie i mierz, zamiast zakładać z góry równoważność funkcjonalną.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec: kategoryzowanie nowego narzędzia AI jako 'zamiennika LLM' i próba wpięcia go w istniejący stack bez zmiany mentalnego modelu budowania oprogramowania. Prowadzi to do błędnych oczekiwań co do zachowania narzędzia i rozczarowania w produkcji.
+
+> **Cytat:** *"@janpfranke right - Jev is not a replacement for LLMs. it requires a new way of thinking about building software - tbh i'm still yet to think through the implications.."*
+
+---
+
+## Architektura agentów / Orkiestracja i optymalizacja kosztów
+
+### Zastąpienie LLM-owego dispatchu deterministycznym API Jev w orkiestratorze Firstmate
+
+- **Data:** `Thu Sep 17 06:16:35 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100468943853085061)
+- **Rodzaj:** Wpis autorski
+- **Powiązane pojęcia:** [[Firstmate Agent|Orkiestracja agentów]] [[Jev]] [[Firstmate Agent|Firstmate]] [[Harness|Deterministyczny dispatch]] [[TypeSafe — przewodnik praktyczny|Redukcja kosztów LLM]] [[Harness|Tool calls]] [[Harness|Ewaluacja równoważności]] [[Jev|Routing modeli i harnessów]]
+
+**Kontekst / Problem:**
+Firstmate jako orkiestrator inteligentnie kieruje każde zadanie do odpowiedniego agenta (permutacja: harness, model, reasoning effort) na podstawie preferencji użytkownika. Domyślnie robił to agent LLM: musiał 'pomyśleć', wykonać tool calls po reguły dispatchu i dane o kwotach (quota), a potem podjąć decyzję — co jest wolne i kosztuje tokeny. Kun zastąpił ten proces wywołaniem Jev (deterministyczne API), które podejmuje identyczną decyzję bez rozumowania i bez tool calli, w ~200 ms.
+
+**Rada inżynierska:**
+Reguła inżynierska: jeśli decyzja agenta jest deterministyczna i regułowa (routing zadań wg reguł dispatchu i danych o quota), NIE zostawiaj jej LLM-owi z rozumowaniem i tool callami — skompiluj ją do deterministycznego API (Jev) i zostaw LLM tylko samo wywołanie narzędzia. Przed podmianą zrób ewaluację równoważności na zbiorze zadań (tu: 25 zadań dało dokładnie tę samą odpowiedź, którą dałby LLM). Zmierz oszczędność osobno dla zastąpionego fragmentu i dla całego procesu: sam Jev to ~100x taniej, a end-to-end (z wliczonym tool callem LLM) -71% kosztu i -90% czasu ściennego dispatchu. Wniosek architektoniczny: LLM to tylko mały element architektury agentowej — kluczowe decyzje warto wynosić do deterministycznych, tanich komponentów. Konfiguracja: ustaw TYPESAFE_API_KEY w .env w repo firstmate, aby aktywować.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec: używanie LLM-a z rozumowaniem i tool callami do podejmowania powtarzalnych, regułowych decyzji orkiestracyjnych — generuje opóźnienie, koszt tokenów i niepotrzebną zmienność tam, gdzie potrzebna jest deterministyczna, szybka decyzja. Drugą pułapką jest podmiana bez walidacji równoważności na zbiorze ewaluacyjnym — bez tego nie wiadomo, czy deterministyczny odpowiednik nie zmienia zachowania systemu.
+
+> **Cytat:** *"i just replaced this dispatch process with Jev. it makes the same decision with no thinking or tool calls, done in ~200ms, and for the 25 tasks i evaluated this with, it gives the exact same answer fable would have given... but even with that counted, the saving from Jev still resulted in a -71% reduction in cost and -90% reduction in wall time of completing the whole dispatching process... i think this is starting to enable a whole new architectural paradigm for software. LLMs are just a small part of it."*
+
+---
+
+## Architektura narzędzi agenta (tool design / harness)
+
+### Nie sprowadzaj narzędzi agenta do surowego bash-a — tracisz tool search
+
+- **Data:** `Thu Sep 17 06:01:23 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100465119897809142)
+- **Rodzaj:** Komentarz w dyskusji (@tanishqk)
+- **Powiązane pojęcia:** [[Harness|Tool Search]] [[Harness|Agent Harness]] [[Harness|Projektowanie narzędzi agenta]] [[Harness|Function Calling]] [[Harness|MCP]] [[Harness|Bash Tool]]
+
+**Kontekst / Problem:**
+Wymiana zdań z @tanishqk i @trq212 wokół upraszczania harnessu agentowego: czy da się zastąpić zestaw strukturalnych narzędzi jednym uniwersalnym narzędziem shellowym (bash). Kun Chen prostuje ten pomysł: owszem, wtedy wszystko staje się znowu bashem, ale przestaje działać cała warstwa tool search i pokrewnych mechanizmów, przez co takie rozwiązanie jest 'strictly worse version of a cli' — czyli gorszą kopią zwykłego terminala, pozbawioną przewag agentowego toolingu.
+
+**Rada inżynierska:**
+Zachowuj strukturalne definicje narzędzi (nazwa, schemat parametrów, opis) zamiast sprowadzać cały interfejs agenta do jednego bash-a. To właśnie te metadane napędzają tool search, routing i walidację wywołań — bez nich harness degeneruje się do 'strictly worse version of a cli': ma ograniczenia shella, a nie ma korzyści zorganizowanego zestawu narzędzi. Jeśli rozważasz uproszczenie toolingu, pytaj nie 'czy bash to załatwi', ale 'co stracę z warstwy discovery i struktury'.
+
+**Uwaga / Anty-wzorzec:**
+Anty-wzorzec: redukcja wszystkich możliwości agenta do jednego generycznego narzędzia typu 'run bash', w przekonaniu że to uproszczenie harnessu. Efekt: tool search i strukturalne wywołania przestają działać, a agent dostaje najgorsze z obu światów — ograniczony shell bez agentowej warstwy abstrakcji.
+
+> **Cytat:** *"@tanishqk @trq212 yes but that becomes bash again and none of the tool search etc would work, right? that becomes a strictly worse version of a cli"*
+
+---
+
+## Harness / Ekosystem narzędzi i strategia vendorowa
+
+### Nie wiąż dostępu do modelu z harnessem dostawcy — wybieraj harness niezależny od modelu
+
+- **Data:** `Sat Sep 12 19:22:48 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2098854862788440308)
+- **Rodzaj:** Wpis autorski
+- **Powiązane pojęcia:** [[Harness]] [[Harness|Model-Agnostic Harness]] [[Harness|Vendor Lock-in]] [[Harness|Transparentność zbierania danych treningowych]] [[Harness|Tech Debt narzędziowy]] [[Harness|Telemetria i prywatność kodu]]
+
+**Kontekst / Problem:**
+Kun komentuje praktykę dostawców modeli (porównując do modelu cenowego Meta dla 'muse spark'), którzy tańszy dostęp do modelu uzależniają od używania własnego harnessa — często potajemnie zbierającego dane lub wysyłającego kod użytkownika. Problem inżynierski: taki układ fragmentuje setup użytkownika, wprowadza ukrytą telemetrię/dane treningowe i zmusza do porzucenia własnego, dojrzałego stacku narzędziowego. Kun argumentuje, że zbieranie danych treningowych da się robić bez wymuszania harnessa — wystarczy przejrzystość i realny wybór.
+
+**Rada inżynierska:**
+Utrzymuj harness niezależny od dostawcy modelu: pi, opencode, hermes, openclaw, a nawet claude code i codex da się skonfigurować pod dowolny model — więc nie ma powodu przyjmować harnessa dostawcy. Jeśli dostawca wiąże dobrą cenę z użyciem swojego harnessa, traktuj to jako sygnał ostrzegawczy: żądaj jawnego oznaczenia, kiedy dane są zbierane, a kiedy nie, ile są warte i daj sobie wybór. Brak transparentności w zakresie zbierania danych = odrzuć ofertę, nie narzędzie.
+
+**Uwaga / Anty-wzorzec:**
+Przyjmowanie harnessa dostawcy w zamian za tańszy dostęp do modelu: (1) fragmentuje spójny, model-agnostyczny setup, (2) wprowadza ukryte zbieranie danych i/lub wysyłanie kodu na serwery dostawcy, (3) tworzy tech debt zależny od jednego vendora, który nie wnosi realnej wartości inżynierskiej. Anty-wzorzec po stronie dostawcy: 'chcesz dobrą cenę? użyj naszego harnessa' zamiast jawnego, wycenionego i opcjonalnego programu wymiany danych.
+
+> **Cytat:** *""every model provider should learn from meta's pricing model for muse spark, with fully transparent subsidization labeled for the contributor tier
+
+stop doing "in order to use our model at a good price, you must use our harness which secretly collects your data and/or upload your codebase"
+
+meta clearly proved there's a way to collect training data without relying on a harness. just be transparent about when you collect data vs not, clearly communicate how much the data is worth, and give the choice to the user
+
+and i really don't need your harness. i already have SO MANY state of the art harnesses to pick from. pi, opencode, hermes, openclaw, and even claude code and codex can be configured to use any model. your own harness is a tech debt that fragments my setup and doesn't add much value""*
+
+---
+
+## Ewaluacja i wybór modeli
+
+### Empiryczna ocena wersji modelu: 4.5 vs 4.6 — nowsze nie znaczy lepsze
+
+- **Data:** `Sat Sep 12 17:23:03 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2098824725866938875)
+- **Rodzaj:** Komentarz w dyskusji (@tejasa97)
+- **Powiązane pojęcia:** [[Harness|Ewaluacja modeli]] [[Harness|A/B testing modeli]] [[Harness|Upgrade bias]] [[TypeSafe — przewodnik praktyczny|Koszt i latencja w produkcji]] [[Harness|Wybór wersji modelu]]
+
+**Kontekst / Problem:**
+Kun Chen odpowiada @tejasa97 w wątku o porównaniu wersji modelu (4.5 vs 4.6). W kontekście ogólnej presji na aktualizację do najnowszej wersji modelu, Kun świadomie wykonuje regresję (revert) do starszej wersji 4.5, aby zweryfikować hipotezę, że nowszy model faktycznie jest lepszy w jego realnym zastosowaniu. To praktyka kontrolowanego testu A/B zamiast ślepego podążania za wydaniami.
+
+**Rada inżynierska:**
+Nie zakładaj, że nowsza wersja modelu jest automatycznie lepsza. Zrób świadomy revert do starszej wersji i przetestuj ją w swoim realnym workflow, mierząc nie tylko 'inteligencję', ale też szybkość i efektywność (koszt/latencję/tokeny). W obserwacji Kuna 4.5 okazał się szybszy i bardziej efektywny przy braku widocznej różnicy w jakości rozumowania — czyli w praktyce produkcyjnej wygrywa starszy model. Wybór modelu to decyzja inżynierska oparta na pomiarach, nie na numerze wersji.
+
+**Uwaga / Anty-wzorzec:**
+Upgrade bias — domyślne przechodzenie na najnowszą wersję modelu 'bo nowsza', bez pomiaru kosztu i latencji. Prowadzi to do wolniejszych, droższych pipeline'ów bez realnego zysku na jakości. Drugi anty-wzorzec: ocenianie modeli wyłącznie po benchmarkach 'inteligencji' z pominięciem szybkości i efektywności, które w produkcji często decydują.
+
+> **Cytat:** *"i deliberately reverted to 4.5 to test whether it’s actually better than 4.6 — so far i think i like 4.5 better. it’s faster and more efficient with no visible difference on intelligence"*
+
+---
+
+## Wybór modelu / debugowanie agentowe
+
+### Opus 4.8 vs Grok 4.5 w debugowaniu CI: hipoteza zamiast diagnozy, $10 vs $1.2
+
+- **Data:** `Sat Sep 12 16:44:00 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2098814897354137710)
+- **Rodzaj:** Wpis autorski
+- **Powiązane pojęcia:** [[Harness|Model selection]] [[Harness|Agentic debugging]] [[Harness|Cost per resolution]] [[Harness|GitHub Actions]] [[Harness|CI runner limits]] [[Harness|Reasoning loops]] [[Harness]]
+
+**Kontekst / Problem:**
+GitHub Actions w repo OSS Kuna Chena nagle przestały się uruchamiać. Kun zlecił diagnozę Opusowi 4.8 — model spalił ~$10 tokenów i upierał się, że przyczyną jest nieopłacony rachunek albo awaria GitHuba. Po przełączeniu na Grok 4.5 (3 minuty, $1.2 tokenów) agent ustalił realną przyczynę: nagły wysyp runów CI w repo 'firstmate' wysycił limit współdzielonych runnerów na całym koncie, po czym anulował nadmiarowe runy i wszystko wróciło do normy. Wpis dokumentuje aktualny stan preferencji Kuna (domyślnie Grok) i jest argumentem za doborem modelu pod zadanie infrastrukturalne, a nie pod markę.
+
+**Rada inżynierska:**
+Dobieraj model do typu zadania, nie do domyślnego nawyku: przy debugowaniu infrastruktury licz nie koszt tokenów, a koszt do rozwiązania (cost-per-resolution). Model, który formułuje wiarygodne hipotezy zewnętrzne (nieopłacony bill, awaria dostawcy) zamiast zbadać stan własnego konta, potrafi spalić 8x więcej budżetu i nie dowieźć fixa. Preferuj agenta, który wykonuje akcje diagnostyczne i naprawcze (odpytanie API, lista runów, anulowanie nadmiarowych), a nie tylko rozumuje. Wniosek Kuna jest wprost ewolucyjny: 'people ask me why i default to grok and this is why' — po serii podobnych doświadczeń domyślnym modelem do pracy agentowej stał się Grok 4.5, a nie Opus 4.8.
+
+**Uwaga / Anty-wzorzec:**
+Anchoring na najbardziej prawdopodobnej hipotezie i brnięcie w nią mimo braku dowodów — agent uznaje, że problem jest po stronie zewnętrznej (billing/outage), bo to najłatwiejsze wyjaśnienie, i nie sprawdza własnego konta ani limitów. Drugi anty-wzorzec: traktowanie wysokiego kosztu tokenów jako sygnału głębszego rozumowania — $10 wydane na błędny wniosek to gorszy wynik niż $1.2 na trafny.
+
+> **Cytat:** *"github actions in my oss repos suddenly stopped running today
+
+i had opus 4.8 look into it, it spent ~$10 worth of tokens and insisted that either i haven't paid my bills or there's a github outage
+
+switched to grok 4.5 and just 3 minutes in with $1.2 worth of tokens, it found there's a surge of CI runs in my firstmate repos starving all the allowed runners across my account, cancelled a bunch of them, and everything's back on track
+
+this is just an anecdotal example but i've had many positive experiences like this. people ask me why i default to grok and this is why"*
+
+---
+
+## Architektura agentów / Orkiestracja
+
+### Routing zadań do subagentów poza LLM-em — dedykowany router (Jev) zamiast autoregresji orkiestratora
 
 - **Data:** `Mon Sep 21 04:57:11 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101898514523730033)
 - **Rodzaj:** Komentarz w dyskusji (@CompleteSkeptic)
-- **Powiązane pojęcia:** [[Firstmate Agent|Orkiestrator chief-of-staff]] [[Firstmate i Agenci Wykonawczy|Subagenty]] [[Jev|Routing zadań w systemach multi-agentowych]] [[Jev|LLM jako router]] [[Harness|Autoregresyjne podejmowanie decyzji]] [[TypeSafe — przewodnik praktyczny|Koszt i latencja routingu]]
+- **Powiązane pojęcia:** [[Harness|Subagenty]] [[Harness|Orkiestrator chief-of-staff]] [[Jev|Routing zadań]] [[Harness|LLM router]] [[Harness|Multi-agent orchestration]] [[Harness|Delegacja zadań w agentach]]
 
 **Kontekst / Problem:**
-Kun odpowiada pod wpisem @CompleteSkeptic, w którym wymieniono listę problemów związanych z subagentami. Kun wskazuje, że jedno z tych wyzwań rozwiązał przy pomocy narzędzia Jev. Kontekst: architektura 'chief-of-staff' — orkiestrator, w której zakłada się, że każde istotne zadanie musi zostać wykonane przez subagenta. W takim układzie kluczowa staje się decyzja, do którego subagenta skierować zadanie.
+Kun Chen odpowiada w wątku pod wpisem @CompleteSkeptic dotyczącym problemów z subagentami. Rozwiązuje jeden z wymienionych problemów: w orkiestratorze w stylu 'chief-of-staff', gdzie zakłada się, że każde istotne zadanie musi wykonać subagent, decyzja o tym, do którego subagenta przekazać zadanie, staje się wąskim gardłem, jeśli podejmuje ją sam LLM orkiestratora.
 
 **Rada inżynierska:**
-W architekturze typu chief-of-staff (gdzie każde istotne zadanie idzie do subagenta) użyj dedykowanego routera (np. Jev) jako drop-in komponentu podejmującego decyzję routingową. Jest to znacznie wydajniejsze niż powierzanie routingu LLM-owi orkiestratora, który musi wczytać dużo danych i autoregresyjnie wygenerować decyzję. Rozdzielenie roli routingu od roli orkiestracji redukuje koszt i latencję decyzji o wyborze subagenta.
+Decyzję routingową (wybór subagenta) warto wynieść z LLM-a orkiestratora do dedykowanego, lekkiego routera (tu: Jev), który działa jak drop-in zamiennik. Router podejmuje decyzję szybciej i taniej niż orkiestrator czytający dużą ilość danych i podejmujący decyzję autoregresyjnie token po tokenie. Wzorzec: orkiestrator planuje, ale klasyfikacja/rozgałęzienie ruchu to zadanie dla wyspecjalizowanego komponentu, nie dla generatywnego rozumowania.
 
 **Uwaga / Anty-wzorzec:**
-Anty-wzorzec: pozwolenie, by LLM orkiestratora samodzielnie podejmował decyzję routingową poprzez czytanie obszernego kontekstu i autoregresyjne 'przemyślenie' wyboru. To marnuje tokeny, zwiększa latencję i wprowadza niepotrzebną wariancję w decyzji, którą można rozwiązać lżejszym, dedykowanym routerem.
+Anty-wzorzec: pozwalanie LLM-owi orkiestratora na podejmowanie decyzji routingowych poprzez wczytywanie obszernego kontekstu i 'autoregresywne' dochodzenie do wyboru — jest to nieefektywne, wolne i niepotrzebnie obciąża główny model tam, gdzie wystarczy prostszy router.
 
 > **Cytat:** *"i used Jev to solve one of the listed problems around subagents and it works really well
 
@@ -123,181 +564,160 @@ in a chief-of-staff style orchestrator, it’s assumed that any substantial task
 
 ---
 
-## Zachowanie modeli / Prompt architecture
+## Harness i zarządzanie kontekstem / koszty
 
-### Prompt caching jako ukryty czynnik kształtujący zachowanie modelu
+### Nie wznawiaj długiej sesji po wygaśnięciu cache — użyj transkryptu w nowej sesji
 
-- **Data:** `Mon Sep 21 03:57:28 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101883484696653984)
-- **Rodzaj:** Komentarz w dyskusji (@elvissun)
-- **Powiązane pojęcia:** [[Prompt Architecture|Prompt caching]] [[Prompt Architecture|Prompt architecture]] [[Prompt Architecture|Stabilny prefiks promptu]] [[TypeSafe — przewodnik praktyczny|Koszt i opóźnienie inferencji]] [[Prompt Architecture|Zachowanie modelu a struktura promptu]]
+- **Data:** `Mon Sep 21 03:46:52 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101880818142515556)
+- **Rodzaj:** Komentarz w dyskusji (@Paiky16)
+- **Powiązane pojęcia:** [[Prompt Architecture|Cache wygasły w długiej sesji]] [[Harness|Transkrypty sesji]] [[TypeSafe — przewodnik praktyczny|Koszt kontekstu]] [[Harness|Nowa sesja zamiast wznawiania]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada @elvissun, potwierdzając jego obserwację i wskazując przyczynę: model (lub agent/harness) zachowuje się w ten sposób, ponieważ próbuje wykorzystać prompt caching. Brak treści posta nadrzędnego, więc dokładny objaw nie jest znany — najprawdopodobniej chodzi o powtarzalność prefiksu, kolejność generowanych elementów lub stabilność struktury promptu między turami.
+Kun Chen odpowiada na wpis @Paiky16, prawdopodobnie dotyczący kontynuowania pracy agenta po przerwie lub między sesjami. Wyjaśnia, że nie trzeba budować własnego mechanizmu przenoszenia stanu: większość harnessów domyślnie zapisuje transkrypty i potrafi je odczytać, więc wystarczy w nowej sesji poinformować agenta, że w poprzednim transkrypcie zostały niedokończone zadania. Ostrzega przy tym, że wznawianie długiej sesji, której cache wygasł, jest bardzo kosztowne.
 
 **Rada inżynierska:**
-Traktuj prompt caching jako realną siłę projektową, a nie tylko optymalizację kosztów. Jeśli chcesz, aby cache trafiał, utrzymuj niezmienny, stabilny prefiks promptu (system prompt, instrukcje, definicje narzędzi, kontekst statyczny) i dokładaj zmienną treść (dane zadania, wyniki narzędzi, historię) na końcu. Gdy zmieniasz cokolwiek w prefiksie — choćby kolejność sekcji czy whitespace — cache przestaje działać i model zaczyna zachowywać się inaczej (np. generuje mniej spójne odpowiedzi, bo nie ma już 'zakotwiczonego' kontekstu).
+Nie implementuj własnego mechanizmu przenoszenia kontekstu między sesjami — większość harnessów domyślnie zapisuje transkrypty i umie je odczytać. Zamiast tego w nowej sesji po prostu poinformuj agenta, że w transkrypcie poprzedniej sesji znajduje się niedokończona praca. Unikaj wznawiania długiej sesji po wygaśnięciu cache — brak trafień w cache przy dużym kontekście potrafi kosztować nawet ~5 USD za jedno żądanie.
 
 **Uwaga / Anty-wzorzec:**
-Anty-wzorzec: wstawianie dynamicznych danych (timestamp, losowe ID, zmienna kolejność sekcji, przeformatowany system prompt) na początek promptu. To unieważnia cache przy każdym wywołaniu, drastycznie zwiększa koszt i opóźnienie, a dodatkowo powoduje, że model nie może polegać na stabilnym kontekście — co bywa mylone z 'niestabilnością modelu' lub 'driftem', gdy w rzeczywistości winna jest architektura promptu.
+Wznawianie długiej sesji, której cache już wygasł — każdy request przelicza cały kontekst od zera, co drastycznie podnosi koszt (rzędu 5 USD za pojedyncze żądanie) i opóźnia odpowiedź. Zamiast tego startuj nową sesję i wskaż transkrypt poprzedniej.
 
-> **Cytat:** *"@elvissun yup.. and that’s because it’s trying to leverage prompt caching"*
+> **Cytat:** *"most agent harnesses save transcripts by default and know how to look them up, so you don’t need to do anything special other than letting the new session know you have some unfinished work in the last session’s transcript
+
+definitely DO NOT resume a long session whose cache expired. that’s what going to cost you $5 for one request"*
 
 ---
 
 ## Zarządzanie kontekstem / Harness
 
-### Zdalne zarządzanie kompaktowaniem kontekstu — oddaj decyzję harnessowi
+### Delegowanie decyzji o kompakcji kontekstu do agenta/harnessu
 
 - **Data:** `Mon Sep 21 03:34:19 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101877657927655730)
 - **Rodzaj:** Komentarz w dyskusji (@kunchenguid)
-- **Powiązane pojęcia:** [[Context Compaction]] [[Context Compaction|Context Window Management]] [[Harness|Agent Harness]] [[Context Compaction|Długie sesje agentowe]]
+- **Powiązane pojęcia:** [[Context Compaction]] [[Harness]] [[Context Compaction|Zarządzanie kontekstem]] [[Harness|Nasycenie kontekstu]] [[Harness|Agentic Coding]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada w wątku o strategiach kompaktowania kontekstu (context compaction) w długich sesjach agenta. Alternatywa dla ręcznego decydowania, kiedy streszczać/zrzucać historię rozmowy, to pozostawienie tego mechanizmowi narzędzia — w tym wypadku 'Jev' (prawdopodobnie agent/integracja w stylu Jevonsa Liu), który sam sygnalizuje moment kompaktowania.
+Kun Chen odpowiada na wpis dotyczący strategii kompakcji kontekstu (prawdopodobnie ręcznej vs automatycznej). Wskazuje alternatywne podejście: zamiast samodzielnie decydować, kiedy kompaktować, pozwala Jevowi (agentowi/harnessowi) sygnalizować moment kompakcji. Brak treści posta nadrzędnego, więc kontekst odtworzony na podstawie samej odpowiedzi.
 
 **Rada inżynierska:**
-Nie steruj kompaktowaniem kontekstu ręcznie — pozwól, by harness/agent wykrywał moment (np. zbliżanie się do limitu okna, spadek trafności) i sam sygnalizował oraz wykonywał kompaktowanie. To jest aktualna praktyka Kuna Chena: przenieś politykę kompaktowania z człowieka do warstwy wykonawczej.
+Nie wymuszaj ręcznej kompakcji kontekstu według sztywnego progu; rozważ delegowanie tej decyzji do harnessu/agenta, który wykryje nasycenie kontekstu i sam wskaże, kiedy należy go skompaktować. Dzięki temu kompakcja następuje na podstawie rzeczywistego zużycia i zachowania modelu, a nie z góry założonego limitu.
 
 **Uwaga / Anty-wzorzec:**
-Automatyczne kompaktowanie jest nieprzejrzyste — jeśli harness streszcza bez audytu, możesz stracić krytyczne szczegóły zadania. Warto mieć punkt kontrolny/log, żeby móc zweryfikować, co zostało wypchnięte z kontekstu; ślepe poleganie na triggerach utrudnia debugowanie regresji.
+Ręczna, przedwczesna kompakcja może usuwać istotny kontekst i prowadzić do utraty informacji potrzebnych do dalszego rozumowania. Z kolei brak mechanizmu sygnalizacji ze strony harnessu może skutkować przepełnieniem okna kontekstowego i degradacją jakości odpowiedzi.
 
 > **Cytat:** *"oh alternatively, which is what i do right now - let Jev tell you when to compact"*
 
 ---
 
-## Zarządzanie kosztami / Prompt caching / Higiena sesji agenta
+## Zarządzanie kontekstem i kosztami
 
-### Zarządzanie kosztami cache'u: /compact PRZED odejściem od długiej sesji
+### Zarządzanie kosztami cache w długich sesjach: /compact przed odejściem, nie po powrocie
 
 - **Data:** `Mon Sep 21 03:14:19 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101872626968969713)
 - **Rodzaj:** Wpis autorski
-- **Powiązane pojęcia:** [[Prompt Architecture|Prompt Caching]] [[Context Compaction|Context Window]] [[Context Compaction|Compaction]] [[TypeSafe — przewodnik praktyczny|Koszt tokenów]] [[Context Compaction|Higiena sesji agenta]] [[Prompt Architecture|Cache Expiration]]
+- **Powiązane pojęcia:** [[Prompt Architecture|Prompt Caching]] [[Context Compaction|Zarządzanie kontekstem]] [[TypeSafe — przewodnik praktyczny|Koszty tokenów]] [[Context Compaction|/compact]] [[Prompt Architecture|TTL cache]] [[Harness|Długie sesje agentowe]] [[Harness|Transkrypt sesji]]
 
 **Kontekst / Problem:**
-Wskazówka o realnych kosztach niecache'owanego promptu przy dużym oknie kontekstu (500k → ponad $5 za pojedyncze żądanie). Problem pojawia się, gdy użytkownik odchodzi od długiej sesji i wraca po wygaśnięciu cache'u (Claude domyślnie 1 godzina, Codex 30 minut). Wtedy każde żądanie — w tym samo /compact — jest pełnym, drogim requestem.
+Kun Chen wyjaśnia pułapkę kosztową związaną z wygaśnięciem cache promptu w długich sesjach agentowych. Problem: gdy użytkownik odchodzi od sesji i wraca po czasie dłuższym niż TTL cache (Claude: 1h, Codex: 30min domyślnie), cały kontekst jest przetwarzany ponownie jako niecache'owany prompt. Przy oknie 500k tokenów pojedyncze żądanie kosztuje ponad $5 — niezależnie od tego, czy to zwykła tura, czy komendanie /compact. Rozwiązanie: kompaktować PRZED odejściem od sesji, nie po powrocie.
 
 **Rada inżynierska:**
-Najlepsza praktyka: uruchom /compact ZANIM odejdziesz od długiej sesji, żeby cache był jeszcze aktywny i kompakcja była tania. Druga najlepsza opcja: gdy wracasz i widzisz duże okno kontekstu, po prostu zacznij nową sesję i poproś agenta, by sięgnął po transkrypt poprzedniej sesji, jeśli potrzebuje kontekstu. Świadomie planuj moment kompakcji względem czasu życia cache'u (Claude 1h, Codex 30 min).
+Reguła inżynierska: uruchamiaj /compact ZANIM odejdziesz od długiej sesji, a nie po powrocie. Kompakcja sama w sobie jest pełnym żądaniem — jeśli cache wygasł, zapłacisz pełną cenę (~$5 przy 500k kontekstu) tylko za próbę zmniejszenia kontekstu. Jeśli wracasz do dużej, bezczynnej sesji, najlepiej: (1) uruchom /compact natychmiast przed przerwaniem pracy, lub (2) rozpocznij nową sesję i poproś agenta o odczytanie transkryptu poprzedniej sesji, jeśli potrzebuje kontekstu. Świadomość TTL cache (Claude 1h, Codex 30min) powinna być częścią planowania pracy z agentem — długie przerwy w sesji kosztują.
 
 **Uwaga / Anty-wzorzec:**
-Uruchamianie /compact po powrocie do długiej, bezczynnej sesji z wygasłym cache'em — ludzie myślą, że kompakcja obniży koszt, ale sam request kompakcji jest pełnym, niecache'owanym żądaniem i kosztuje ~$5 w momencie wykonania. To najczęstsza droga do nieświadomego przepalenia budżetu (nawet przy kwocie subskrypcyjnej).
+Anty-wzorzec: powrót do długiej bezczynnej sesji i uruchomienie /compact z myślą, że obniży to koszty. Jest odwrotnie — gdy cache wygasł, kompakcja sama kosztuje pełną cenę niecache'owanego żądania (ponad $5 przy 500k okna). Drugi anty-wzorzec: ignorowanie TTL cache i pozostawianie długich sesji otwartych przez przerwy dłuższe niż czas życia cache.
 
-> **Cytat:** *"a quick tip that may surprise some folks
-
-an uncached prompt to fable at 500k context window will directly cost you over $5 for A SINGLE REQUEST. that's a cup of coffee or a cheese burger gone. even with subscription quota, this hits like a truck
-
-the most common way to fall into that case is when you walk away from a long session and come back after a while when cache expired (claude is 1 hr, codex is 30 mins by default)
-
-in particular, when you come back to a long idle session, don't run "/compact" there thinking it'll reduce your cost, because the compaction request is still a real request and it will cost $5 by itself right there
-
-the best thing to do is to /compact BEFORE you walk away
-
-the next best thing is when you come back and see a large context window, just start a new session, and ask your agent to look for the last session's transcript if it needs context"*
+> **Cytat:** *"a quick tip that may surprise some folks — an uncached prompt to fable at 500k context window will directly cost you over $5 for A SINGLE REQUEST... the most common way to fall into that case is when you walk away from a long session and come back after a while when cache expired (claude is 1 hr, codex is 30 mins by default)... don't run "/compact" there thinking it'll reduce your cost, because the compaction request is still a real request and it will cost $5 by itself right there. the best thing to do is to /compact BEFORE you walk away. the next best thing is when you come back and see a large context window, just start a new session, and ask your agent to look for the last session's transcript if it needs context."*
 
 ---
 
-## Inżynieria produktu AI / ocena modeli
+## Zarządzanie kontekstem / ewolucja praktyk inżynierskich
 
-### Luka między badaniami a użytecznym produktem: ocena modelu Laya (512–1k kontekstu, trafność jak rzut monetą)
+### Ewolucja podejścia do kompresji kontekstu: od „just auto compact” do taniego, szybkiego osądu modelu (Jev)
 
-- **Data:** `Sun Sep 20 04:51:10 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101534610710761923)
-- **Rodzaj:** Wpis autorski
-- **Powiązane pojęcia:** [[Stabilność modeli i przestrzeganie promptu|Ocena modelu]] [[Context Compaction|Okno kontekstu]] [[TypeSafe i Jev — wywiad z Diogo Almeidą|Fine-tuning]] [[Stabilność modeli i przestrzeganie promptu|Luka research-produkt]] [[Stabilność modeli i przestrzeganie promptu|Adopcja modelu]] [[Interpretable Context Methodology|Pakowanie rozwiązania]]
+- **Data:** `Fri Sep 18 22:27:31 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101075672747970901)
+- **Rodzaj:** Komentarz w dyskusji (@seflless)
+- **Powiązane pojęcia:** [[Harness|Auto-compact]] [[Context Compaction|Zarządzanie kontekstem]] [[Harness|Kompresja kontekstu]] [[Harness|Ewolucja modeli]] [[TypeSafe — przewodnik praktyczny|Koszt osądu modelu]] [[Harness|Aktualizacja wiedzy inżynierskiej]]
 
 **Kontekst / Problem:**
-Kun reaguje na narrację, że autor modelu Laya 'zbudował to samo rok wcześniej', a Jev 'ukradł mu cały rozgłos' — i że wystarczyło 'opowiedzieć swoją historię' albo 'lepiej się promować'. Kun weryfikuje sam model Laya i pokazuje, że różnica nie leży w marketingu, lecz w gotowości produktu do adopcji.
+Kun Chen odpowiada @seflless w wątku o strategiach zarządzania kontekstem (auto-compact vs. ręczna, granularna optymalizacja). Wyjaśnia, że przez długi czas jego stałą rekomendacją było „just auto compact” — czyli oddanie kompresji kontekstu automatyce, ponieważ czas człowieka powinien być przeznaczony na decyzję „co dalej”, a nie na mikro-optymalizacje. Ta rekomendacja uległa jednak zmianie wraz z pojawieniem się „Jev”: gdy osąd modelu staje się wystarczająco szybki i tani, selektywna, świadoma ocena kontekstu przestaje być kosztowna — nie ma więc powodu z niej rezygnować. To jawna aktualizacja wcześniejszego stanowiska: starsza rada (auto-compact, nie mikro-optymalizuj) obowiązywała przy wolniejszym/droższym rozumowaniu modelu; nowszy wpis odzwierciedla zaktualizowany stan wiedzy.
 
 **Rada inżynierska:**
-Zanim uznasz model badawczy za gotowy do użycia, oceń go bezpośrednio pod kątem realnych ograniczeń produkcyjnych: sprawdź okno kontekstu (Laya obsługuje tylko 512–1k tokenów, więc wiele przypadków użycia się nie zmieści) oraz bazową trafność (bez fine-tuningu wynik jest jak rzut monetą). Wartość powstaje dopiero, gdy z interesującego researchu zrobisz zapakowane rozwiązanie, które da się wziąć i użyć — ten wysiłek integracyjny to nie 'marketing', to realna inżynieria i ona decyduje o adopcji.
+Domyślną praktyką pozostaje „just auto compact” — nie marnuj czasu człowieka na mikro-optymalizację kontekstu, skup się na decyzji „what to do next”. ZASADA AKTUALIZACJI: wraz z modelami, których osąd (judgment) jest szybki i tani (przypadek „Jev”), kalkulacja się odwraca — granularna, świadoma selekcja/kompresja kontekstu staje się opłacalna i nie ma powodu z niej rezygnować. Zanim utrwalą się stare heurystyki kontekstowe, sprawdź koszt i szybkość osądu aktualnie używanego modelu — ta sama rada może być już nieaktualna.
 
 **Uwaga / Anty-wzorzec:**
-Zrzucanie braku adopcji na słabą promocję ('trzeba opowiedzieć swoją historię') przy jednoczesnym pominięciu, że model wymaga fine-tuningu i ma zbyt mały kontekst, by cokolwiek na nim zbudować. Zakładanie, że sam wynik badawczy jest produktem gotowym do wdrożenia — mylenie 'ciekawego researchu' z 'użytecznym produktem'.
+Traktowanie rekomendacji kontekstowych jako wiecznych dogmatów: rada „auto compact, nie optymalizuj” była poprawna przy starym reżimie kosztowym, ale przy szybkim i tanim osądzie modelu staje się anty-wzorcem — prowadzi do oddania kontroli nad kontekstem, gdy selektywna ocena jest już praktycznie darmowa. Drugi anty-wzorzec: ręczna mikro-optymalizacja kontekstu, która zjada czas człowieka przeznaczony na decyzje „co dalej”.
 
-> **Cytat:** *"i just looked into this laya model and: - it only supports 512-1k context… a lot of use cases won’t fit at all - evaluating the model directly shows its accuracy is as good as a coin flip. in order to get good results, you need to first fine tune it ... there’s a massive gap between an interesting research and a useful product ... Jev is not completely new from an academic sense, just like how ChatGPT was not the first LLM. don’t underestimate the effort and value in putting together something that’s actually good enough for adoption - it makes all the difference"*
+> **Cytat:** *""just auto compact" has actually been my recommendation all along, because i think our human time should be spent on "what to do next", not these micro optimizations
+
+that changed with Jev. the judgment becomes so fast and cheap that there's no reason not to get it"*
 
 ---
 
-## Harness / Zarządzanie kontekstem i sesją agenta
+## Zarządzanie kontekstem / Harness agentowy
 
-### Ręczne etykietowanie checkpointów sesji i kryterium "safe checkpoint"
+### Ręczne etykietowanie checkpointów i kryterium „safe” w kompakcji kontekstu agenta
 
 - **Data:** `Fri Sep 18 20:25:20 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101044924301156365)
 - **Rodzaj:** Komentarz w dyskusji (@mktpavlenko)
-- **Powiązane pojęcia:** [[Context Compaction|Context compaction]] [[Bezpieczny punkt kompaktowania|Checkpointing sesji agenta]] [[Harness|Ewaluacja harnessu]] [[Eval Set z realnych sesji|Manualne etykietowanie danych]] [[Persistencja stanu agenta|Persistencja stanu sesji]]
+- **Powiązane pojęcia:** [[Context Compaction]] [[Bezpieczny punkt kompaktowania|Checkpointing w harnessie agenta]] [[Harness|Persystencja stanu vs historia czatu]] [[Eval Set z realnych sesji|Ręczne etykietowanie ground truth]] [[Harness|Harness agentowy]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada na wpis @mktpavlenko, wyjaśniając metodologię budowy zbioru checkpointów do ewaluacji kompresji/ucięcia kontekstu sesji agenta. Problem: jak obiektywnie ustalić, w którym miejscu sesji można bezpiecznie uciąć kontekst (compaction/truncation), nie tracąc informacji krytycznej dla dalszego przebiegu zadania.
+Kun Chen odpowiada @mktpavlenko w dyskusji o checkpointach sesji agenta (punktach kompakcji / porzucania wcześniejszego kontekstu). Wyjaśnia metodykę budowy zbioru referencyjnego: sam ręcznie etykietował wszystkie checkpointy, a status „safe” (bezpieczny do odcięcia wcześniejszej historii) wyznaczał nie po tym, co już się wydarzyło, lecz po tym, czy RESZTA sesji potrzebuje czegokolwiek z wcześniejszej części, co nie zostało utrwalone w stanie trwałym.
 
 **Rada inżynierska:**
-Nie ufaj automatycznemu wykrywaniu punktów cięcia kontekstu — etykietuj checkpointy ręcznie. Punkt uznawany za "safe" definiuj operacyjnie: sprawdź, czy pozostała część sesji faktycznie potrzebuje czegokolwiek z wcześniejszego kontekstu, co nie zostało utrwalone (persisted). Jeśli nic takiego nie potrzebuje — checkpoint jest bezpieczny do ucięcia.
+Bezpieczeństwo checkpointu definiuj przez zależność W PRZÓD, nie w tył: checkpoint jest 'safe' tylko wtedy, gdy żadna późniejsza część sesji nie odwołuje się do informacji z odcinanego segmentu, której nie ma w stanie persystowanym. Praktycznie: (1) najpierw utrwal wszystko, co może być potrzebne dalej (pliki, notatki, stan zadania), (2) dopiero potem odcinaj historię, (3) buduj ground truth ręcznym etykietowaniem — automatyczne metryki typu 'rozmiar kontekstu' nie mówią nic o bezpieczeństwie kompakcji.
 
 **Uwaga / Anty-wzorzec:**
-Traktowanie "safe checkpoint" jako pojęcia intuicyjnego lub zależnego wyłącznie od rozmiaru kontekstu, zamiast od realnej zależności kolejnych kroków od nieutrwalonej informacji z przeszłości. Grozi to utratą krytycznego stanu przy kompresji i cichym regresem jakości w produkcji.
+Ocenianie jakości kompakcji po tym, czy agent 'pamięta' przeszłość, zamiast po tym, czy przyszłe kroki mają wszystkie potrzebne dane. Odcinanie kontekstu bez zapisania wniosków do stanu trwałego prowadzi do cichej utraty informacji, którą agent 'odkrywa' dopiero wiele kroków później — wtedy debugowanie jest bardzo kosztowne.
 
 > **Cytat:** *"@mktpavlenko all the checkpoints were manually labeled by myself and "safe" checkpoints were determined by looking at whether the rest of the session indeed needs anything in the prior session that's not persisted"*
 
 ---
 
-## Zarządzanie kontekstem / Harness agenta
+## Inne obserwacje
 
-### Nie stosuj natychmiastowej kompakcji kontekstu — najpierw sprawdź, czy jesteś w bezpiecznym punkcie
+### Nie rób „instant compaction
 
 - **Data:** `Fri Sep 18 19:53:16 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101036854925779291)
 - **Rodzaj:** Komentarz w dyskusji (@gehariharan)
-- **Powiązane pojęcia:** [[Context Compaction]] [[Context Compaction|Zarządzanie kontekstem agenta]] [[Harness|Harness agenta]] [[Bezpieczny punkt kompaktowania|Bezpieczne punkty kontrolne]] [[Bezpieczny punkt kompaktowania|Klasyfikacja stanu agenta]]
-
-**Kontekst / Problem:**
-Kun Chen odpowiada @gehariharan w wątku o strategiach kompakcji kontekstu (context compaction) w agentach LLM. Ktoś zaproponował podejście 'instant compaction' — natychmiastowe streszczanie/kompresowanie kontekstu, gdy tylko się zapełni. Kun ostrzega, że to zły pomysł i wskazuje właściwy sposób myślenia o tym problemie.
-
-**Rada inżynierska:**
-Nie kompaktuj kontekstu natychmiast po przekroczeniu progu zapełnienia. Kompakcja to w istocie zadanie klasyfikacyjne: musisz najpierw ustalić, czy agent znajduje się w punkcie, w którym kompakcja jest bezpieczna (np. na granicy logicznego kroku, po zakończeniu operacji, bez otwartego stanu pośredniego). Dopiero wtedy wykonuj kompakcję. Traktuj decyzję 'kompaktować teraz czy nie' jako osobny problem klasyfikacji stanu, a nie jako prosty trigger progowy.
-
-**Uwaga / Anty-wzorzec:**
-Anty-wzorzec 'instant compaction': automatyczna kompakcja wyzwalana wyłącznie progiem rozmiaru kontekstu, bez oceny, czy agent jest w bezpiecznym punkcie. Prowadzi to do przerywania operacji w połowie, utraty spójności stanu i błędów w dalszym rozumowaniu.
-
-> **Cytat:** *"@gehariharan don't do the "instant compaction" thing. i commented on the post - it's a bad idea
-
-this is just plain and simple classifying whether you are sitting at a place where it's safe to compact"*
-
 ---
 
-## Context Engineering / zarządzanie oknem kontekstowym agenta
+## Zarządzanie kontekstem / Harnessy agentowe / Ewaluacja promptów
 
-### compact-adviser: klasyfikator momentu bezpiecznej kompakcji kontekstu z adaptacyjnym balansem precision/recall
+### compact-adviser: dynamiczny próg precision/recall przy decyzji o kompakcji sesji
 
 - **Data:** `Fri Sep 18 19:36:40 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2101032677940117875)
 - **Rodzaj:** Wpis autorski
-- **Powiązane pojęcia:** [[Context Compaction|Context Engineering]] [[Context Compaction|Kompakcja kontekstu]] [[Context Compaction|/compact]] [[Bezpieczny punkt kompaktowania|Task Boundary]] [[Bezpieczny punkt kompaktowania|Precision vs Recall]] [[Eval Set z realnych sesji|Eval Set]] [[Prompt Architecture|Prompt Hillclimbing]] [[Harness|Agent Harness]] [[Harness|Agent Plugin]] [[Jev]] [[Bezpieczny punkt kompaktowania|compact-adviser]]
+- **Powiązane pojęcia:** [[Context Compaction|Compaction kontekstu]] [[Harness|Zarządzanie oknem kontekstowym]] [[Harness|Precision vs Recall]] [[Eval Set z realnych sesji|Eval set z sesji]] [[Harness|Prompt hillclimbing]] [[Harness|Task boundary]] [[Harness|Agent plugin]] [[Jev|Jev klasyfikator]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada na powtarzające się pytanie użytkowników Claude Code / pi: „kiedy powinienem zrobić /compact w sesji?”. Problem: nie ma prostej reguły, bo bezpieczeństwo kompakcji zależy od tego, jak prawdopodobne jest, że przyszłe akcje agenta będą potrzebować szczegółowego kontekstu obecnego okna. Rozwiązanie: plugin agentowy compact-adviser (oparty na prompcie „Jev”), który klasyfikuje, czy jesteśmy na granicy zadania (task boundary) bezpiecznej do kompakcji. Autor zbudował prywatny eval set z 40 prawdziwych sesji, ręcznie oznaczył checkpointy safe vs unsafe i hillclimbował prompt, aż osiągnął dobre wyniki. Wtyczka wspiera tryb „hint” (tylko podpowiedź, /compact uruchamiasz sam) oraz „auto” (kompakcja uruchamiana automatycznie, gdy Jev uzna to za bezpieczne).
+Kun odpowiada na powracające pytanie społeczności: "kiedy powinienem zrobić /compact sesji?". Problem: nie ma uniwersalnej odpowiedzi, bo zależy to od tego, czy przyszłe akcje agenta będą potrzebować szczegółowego kontekstu z bieżącego okna. Rozwiązanie: plugin agentowy compact-adviser zbudowany na klasyfikatorze Jev, dostępny w Claude i pi, który ocenia, czy jesteśmy na bezpiecznej granicy zadania (task boundary) do kompakcji. Klasyfikator został wykalibrowany na prywatnym zbiorze ewaluacyjnym z 40 prawdziwych sesji z ręcznie oznaczonymi bezpiecznymi i niebezpiecznymi punktami kontrolnymi; prompt Jev był hillclimbowany do dobrej skuteczności.
 
 **Rada inżynierska:**
-Nie traktuj kompakcji kontekstu jako decyzji binarnej ani stałego progu — zrób z niej klasyfikator z polityką zależną od zapełnienia okna: (1) przy małym zużyciu okna optymalizuj PRECISION, żeby nie wyzwalać kompakcji przedwcześnie (unikając utraty szczegółów potrzebnych w przyszłych krokach), (2) w miarę zapełniania się okna stopniowo przesuwaj optymalizację w stronę RECALL, bo koszt niekompaktowania rośnie, a na końcu agent i tak zostanie zmuszony do kompakcji. Klasyfikator oprzyj na jawnym kryterium „czy jestem na granicy zadania”, a nie na liczbie tokenów. Zawsze waliduj taki prompt na własnym, ręcznie oznaczonym zbiorze realnych sesji (autor: 40 sesji, etykiety safe/unsafe checkpointów) i hillclimbuj prompt względem tej metryki — dopiero wtedy wtyczka nadaje się do trybu auto. Warto rozdzielić tryb „hint” (agent doradza, człowiek decyduje) od „auto” (agent wykonuje kompakcję sam) — hint jest bezpiecznym krokiem pośrednim przed automatyzacją.
+Nie traktuj decyzji o kompakcji jako statycznej reguły – steruj nią dynamicznie względem zapełnienia okna kontekstowego. Gdy okno jest małe, optymalizuj pod PRECISION (nie kompaktuj przedwcześnie, bo stracisz szczegóły potrzebne w kolejnych krokach). W miarę zapełniania się okna stopniowo przesuwaj się w stronę RECALL (nie przegap okazji do kompakcji), ponieważ koszt braku kompakcji rośnie, a na końcu agent i tak zostanie zmuszony do kompakcji. Zbuduj prywatny eval set z rzeczywistych sesji z ręcznie oznaczonymi bezpiecznymi/niebezpiecznymi checkpointami i hillclimbuj prompt klasyfikatora – to jedyny sposób, by ocenić, czy próg jest sensowny. Rozdziel tryb 'hint' (sugestia, użytkownik sam uruchamia /compact) od 'auto' (kompakcja automatyczna, gdy klasyfikator uzna to za bezpieczne).
 
 **Uwaga / Anty-wzorzec:**
-Anty-wzorzec: sztywne progi i rutynowe /compact oparte wyłącznie na zapełnieniu kontekstu. Kompakcja zbyt wczesna niszczy szczegółowy kontekst, którego potrzebują przyszłe akcje agenta; kompakcja zbyt późna kończy się wymuszoną, chaotyczną kompakcją w najgorszym możliwym momencie (w środku zadania). Drugi anty-wzorzec: wdrażanie takiego klasyfikatora w trybie „auto” bez własnego eval setu i ręcznie oznaczonych etykiet — bez pomiaru precision/recall nie wiesz, czy plugin nie kompaktuje w środku krytycznego kroku.
+Brak refleksji nad granicą zadania (task boundary) – kompaktowanie w środku zadania wymagającego detalu z bieżącego okna powoduje utratę kontekstu i błędy w kolejnych krokach. Odwrotna pułapka: zwlekanie z kompakcją przy zapełnionym oknie, co kończy się wymuszoną, niekontrolowaną kompakcją w najgorszym możliwym momencie.
 
-> **Cytat:** *"almost every day i hear people ask "when should i /compact my session" — there's no easy answer because it depends on how likely your future action will need detailed context in the existing window ... i built a private eval set from 40 real sessions and manually labeled all the safe vs unsafe checkpoints to evaluate this, and hillclimbed the Jev prompt till it performed quite well ... the classifier will - optimize for precision (not triggering a compaction prematurely) when context window is small - and gradually shift to optimize for recall (not missing an opportunity to compact) when context window fills up, because the cost of not compacting becomes higher, and at the end the agent will be forced to compact anyway"*
+> **Cytat:** *"there's no easy answer because it depends on how likely your future action will need detailed context in the existing window ... i built a private eval set from 40 real sessions and manually labeled all the safe vs unsafe checkpoints to evaluate this, and hillclimbed the Jev prompt till it performed quite well ... optimize for precision (not triggering a compaction prematurely) when context window is small - and gradually shift to optimize for recall (not missing an opportunity to compact) when context window fills up, because the cost of not compacting becomes higher, and at the end the agent will be forced to compact anyway"*
 
 ---
 
-## Zarządzanie kontekstem / Prompt Caching
+## Prompt Caching / Zarządzanie kontekstem
 
-### Cache'owanie promptu: kompakcja całej sesji vs. selektywne usuwanie wiadomości
+### Kompaktowanie kontekstu: pełna sesja w cache vs. wycinanie historii (cache miss 10x-40x)
 
 - **Data:** `Fri Sep 18 05:15:45 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100816020932096060)
 - **Rodzaj:** Komentarz w dyskusji (@DeccansoftAI)
-- **Powiązane pojęcia:** [[Prompt Architecture|Prompt Caching]] [[Context Compaction]] [[Prompt Architecture|Cache Miss]] [[Context Compaction|Zarządzanie kontekstem]] [[TypeSafe — przewodnik praktyczny|Ekonomia tokenów]]
+- **Powiązane pojęcia:** [[Prompt Architecture|Prompt Caching]] [[Context Compaction]] [[Prompt Architecture|Cache Miss]] [[Context Compaction|Zarządzanie kontekstem]] [[Harness|Ekonomia tokenów]] [[Prompt Architecture|Anthropic Prompt Caching]]
 
 **Kontekst / Problem:**
-Odpowiedź Kun Chena w dyskusji (@DeccansoftAI, @tamarajtran, @typesafeai) dotyczącej strategii kompakcji długich sesji LLM. Ktoś zasugerował, że przed kompakcją warto usuwać część wiadomości z historii, by zaoszczędzić tokeny. Kun prostuje to błędne założenie, tłumacząc realny mechanizm rozliczania cache'u promptu.
+Kun Chen odpowiada w wątku (@DeccansoftAI, @tamarajtran, @typesafeai) na pytanie o to, czy przy kompaktowaniu sesji LLM warto najpierw usuwać część wiadomości z historii. Wyjaśnia ekonomię prompt cache: pełna, niezmodyfikowana sesja przy kompaktowaniu trafia w cache i kosztuje bardzo mało, natomiast jakakolwiek modyfikacja historii (usunięcie wiadomości) przed żądaniem kompaktowania powoduje cache miss i naliczenie pełnej ceny.
 
 **Rada inżynierska:**
-Kompaktuj całą sesję naraz — pełny, niezmodyfikowany kontekst sesji jest w pełni trafieniem w cache (fully cached prompt) i kosztuje bardzo mało. Kompakcja to więc tania operacja, dopóki nie modyfikujesz historii wejściowej.
+Kompaktuj CAŁĄ sesję bez modyfikacji historii — wtedy prompt w całości trafia w cache (cached prompt) i koszt jest bardzo niski. Każde usunięcie/przycięcie wiadomości z historii przed kompaktowaniem unieważnia cache (cache miss) i jest rozliczane po PEŁNEJ cenie, czyli 10x-40x drożej. Reguła: jeśli chcesz zaoszczędzić, nie 'sprzątaj' historii przed kompaktowaniem — pozwól, by prefiks promptu pozostał identyczny i w pełni cache'owalny.
 
 **Uwaga / Anty-wzorzec:**
-Selektywne usuwanie wiadomości z historii przed uruchomieniem kompakcji powoduje cache miss — prefiks promptu się zmienia, więc cały request jest rozliczany po PEŁNEJ cenie, czyli 10x–40x drożej niż przy trafieniu w cache. Oszczędzanie na tokenach przez wycinanie historii paradoksalnie drastycznie zwiększa koszt.
+Anty-wzorzec: ręczne wycinanie/prune wiadomości z historii przed uruchomieniem compaction request. Intuicyjnie wydaje się, że 'mniejszy kontekst = taniej', ale w rzeczywistości psuje to cache (cache miss) i podnosi koszt 10x-40x względem kompaktowania całej, niezmienionej sesji.
 
 > **Cytat:** *"no, because when the LLM compacts the whole session, it's a fully cached prompt whose price is very low
 
@@ -305,22 +725,22 @@ but if you remove some of the messages from the history and then run a compactio
 
 ---
 
-## Zarządzanie kontekstem / Kompakcja i okno kontekstowe agenta
+## Zarządzanie kontekstem / Compaction w harnessie agenta
 
-### Selektywne usuwanie wywołań narzędzi to zła strategia kompakcji kontekstu
+### Krytyka selektywnej kompakcji usuwającej tylko wywołania narzędzi
 
 - **Data:** `Fri Sep 18 04:15:10 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100800776620900454)
 - **Rodzaj:** Komentarz w dyskusji (@tamarajtran)
-- **Powiązane pojęcia:** [[Context Compaction|Kompakcja kontekstu]] [[Context Compaction|Okno kontekstowe]] [[Context Compaction|Tool calls]] [[Prompt Architecture|Prompt caching]] [[Context Compaction|Długotrwałe zadania agenta]] [[Rework Rate|Ewaluacje agentów]] [[Stabilność modeli i przestrzeganie promptu|DeepSWE]] [[Stabilność modeli i przestrzeganie promptu|ProgramBench]] [[Context Compaction|Anty-wzorce zarządzania kontekstem]]
+- **Powiązane pojęcia:** [[Context Compaction]] [[Context Compaction|Context Window Management]] [[Prompt Architecture|Prompt Caching]] [[Harness|Agent Harness]] [[Harness|Ewaluacje agentów (DeepSWE, ProgramBench)]] [[Harness|Self-recovery agenta]]
 
 **Kontekst / Problem:**
-Kun Chen odpowiada pod wpisem @tamarajtran, w którym promowana (i szeroko rozprzestrzeniająca się) technika kompakcji kontekstu polega na selektywnym usuwaniu z historii tylko wywołań narzędzi (tool calls), przy zachowaniu wszystkich wiadomości użytkownika i asystenta. Kun ostrzega, że to pozornie praktyczne podejście jest w rzeczywistości błędne i szkodliwe w produkcji.
+Kun Chen reaguje na szeroko rozprzestrzeniającą się technikę kompakcji kontekstu, która polega na selektywnym usuwaniu wyłącznie części wywołań narzędzi (tool calls), pozostawiając wszystkie wiadomości użytkownika i asystenta na stałe. Ostrzega, że mimo popularności tego podejścia jest ono fundamentalnie wadliwe i proponuje weryfikację empiryczną zamiast wiary w anegdotyczne sukcesy.
 
 **Rada inżynierska:**
-Prawdziwa kompakcja musi realnie ZMNIEJSZAĆ okno kontekstowe — usuwanie jedynie części wywołań narzędzi, przy trwałym zachowaniu wiadomości user/assistant, prowadzi do tego, że podsumowanie kompakcji może tylko rosnąć. Zamiast wymyślać selektywne sztuczki, stosuj pełną kompakcję i ZAWSZE mierz kompromis koszt/wydajność za pomocą evalów (np. DeepSWE, ProgramBench), zanim uznasz rozwiązanie za praktyczne.
+Prawdziwa kompakcja musi redukować CAŁY kontekst — w tym wiadomości user/assistant — a nie tylko wycinać wywołania narzędzi. Jeśli podsumowanie zamiast się kurczyć, rośnie monotonicznie, to przy długotrwałych zadaniach kontekst i tak się wyczerpie i agent nie będzie mógł się samodzielnie podnieść (self-recover) — co znosi główny cel kompakcji, czyli uwolnienie okna kontekstowego. Dodatkowo trzeba uwzględnić ekonomię cache'u: pozostawienie zbyt wielu elementów w kontekście sprawia, że kolejne zapytanie staje się ogromnym, niecache'owanym promptem, który bywa droższy niż kontynuacja długiej, zacache'owanej sesji — co znosi drugi cel kompakcji, czyli oszczędność kosztów. Zanim uznasz technikę za praktyczną, zmierz kompromis koszt/jakość na ewaluacjach (np. DeepSWE, ProgramBench) i podziel się wynikami.
 
 **Uwaga / Anty-wzorzec:**
-Dwa fundamentalne błędy selektywnego usuwania tool calls: (1) kontekst nigdy się nie kurczy — wiadomości user/assistant zostają na zawsze, więc podsumowanie kompakcji rośnie bez ograniczeń i długotrwałe zadania w końcu wyczerpią okno kontekstowe bez możliwości samo-naprawy, co niweczy podstawowy cel kompakcji; (2) pozostawia się znacznie więcej treści niż przy prawdziwej kompakcji, przez co następne zapytanie staje się ogromnym, nie-zbuforowanym (uncached) promptem — w niektórych przypadkach droższym niż kontynuacja długiej, zbuforowanej sesji, co niweczy drugi cel kompakcji, czyli oszczędność kosztów.
+Selektywne usuwanie tylko tool calls przy trwałym zachowaniu wiadomości user/assistant: (1) podsumowanie kompakcji rośnie w nieskończoność zamiast maleć, co prowadzi do wyczerpania okna kontekstowego i braku możliwości samodzielnego odzyskania przez agenta; (2) pozostawia zbyt dużo treści w kontekście, zamieniając kolejny request w masywny uncached prompt — potencjalnie droższy niż dalsze korzystanie z długiej, zacache'owanej sesji. Anty-wzorzec: przyjmowanie popularnej techniki bez pomiaru tradeoffu koszt/wydajność.
 
 > **Cytat:** *"umm.. since this is somehow spreading so widely, i feel obligated to point out that this is unfortunately a bad idea
 
@@ -331,116 +751,5 @@ the fundamental flaws -
 2. this operation leaves a lot more stuff in the context window than a real compaction, which means the next request after doing this becomes a massive uncached prompt which in some cases even more expensive than letting the long cached session continue, which defeats the other purpose of compaction which is cost saving
 
 i suggest running some evals such as deepswe, programbench etc to actually measure the cost and performance tradeoff and share it if you are truly convinced this is practical"*
-
----
-
-## Architektura systemów LLM / Wybór podejścia
-
-### Dlaczego klasyfikatory tradycyjne nie zastąpią LLM przy kategoriach definiowanych przez użytkownika
-
-- **Data:** `Thu Sep 17 15:35:36 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100609623531421915)
-- **Rodzaj:** Komentarz w dyskusji (@winterspeak)
-- **Powiązane pojęcia:** [[Jev|LLM vs klasyczne klasyfikatory]] [[Jev|Zero-shot classification]] [[Jev|User-defined categories]] [[Jev|Freeform taxonomy]] [[Stabilność modeli i przestrzeganie promptu|Wybór modelu do zadania]]
-
-**Kontekst / Problem:**
-Kun Chen odpowiada @winterspeak, który prawdopodobnie sugerował użycie klasycznego klasyfikatora (np. ML/trenowanego modelu) zamiast LLM do kategoryzacji. Kun wyjaśnia, że w jego przypadku kategorie są definiowane przez użytkownika i całkowicie swobodne (freeform), co uniemożliwia zastosowanie klasycznego klasyfikatora.
-
-**Rada inżynierska:**
-Gdy kategorie/etykiety są definiowane dynamicznie przez użytkownika i mają charakter freeform, klasyczny klasyfikator ML jest bezużyteczny — nie da się wytrenować jednego modelu pokrywającego wszystkie możliwe schematy kategorii, a wymuszanie treningu per-użytkownik jest niepraktyczne. W takich przypadkach LLM (zero/few-shot) jest właściwym wyborem, bo działa na dowolnie zdefiniowanym schemacie bez treningu.
-
-**Uwaga / Anty-wzorzec:**
-Anty-wzorzec: sięganie po klasyczny klasyfikator (supervised ML) do zadań, w których przestrzeń etykiet jest otwarta, zależna od kontekstu użytkownika lub zmienna w czasie. Prowadzi to do niekończącego się re-treningu, sztywnego schematu i braku generalizacji na nowych użytkowników.
-
-> **Cytat:** *"@winterspeak not exactly - if you think about the use case i have here, the categories are user-defined and completely freeform
-
-there’s no way i can train a traditional classifier that will work for every user, and there’s no way every user will train their own classifier"*
-
----
-
-## Weryfikacja i harness
-
-### Kwantyfikacja pewności modelu jako warunek odrzucania odpowiedzi
-
-- **Data:** `Thu Sep 17 15:29:09 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100608000042127434)
-- **Rodzaj:** Komentarz w dyskusji (@PremiumGoblin)
-- **Powiązane pojęcia:** [[Jev|Confidence scoring]] [[Weryfikator|External verifier]] [[Stabilność modeli i przestrzeganie promptu|Requirement ambiguity]] [[Weryfikator|Answer rejection threshold]] [[Jev]]
-
-**Kontekst / Problem:**
-Kun Chen odpowiada na wpis @PremiumGoblin, prawdopodobnie sugerujący, że wystarczy dobrze zdefiniować wymagania, by model radził sobie z implementacją. Kun prostuje: nie zawsze to działa, bo sama ocena, czy wymagania są 'wystarczająco dobrze zdefiniowane' i ile dwuznaczności pozostaje w fazie implementacji, jest trudnym, niejednoznacznym problemem — a nie binarnym warunkiem wstępnym.
-
-**Rada inżynierska:**
-Nie traktuj 'dobrego zdefiniowania wymagań' jako jedynego zabezpieczenia przed błędami modelu. Wprowadź mechanizm kwantyfikacji pewności (np. Jev), który zwraca confidence score dla odpowiedzi — wtedy możesz zbudować regułę odrzucania: 'jeśli model nie jest pewny, odrzucam jego odpowiedź' zamiast ślepo ją przyjmować. To przenosi ciężar decyzji z ludzkiej (niejednoznacznej) oceny klarowności wymagań na mierzalny sygnał z systemu.
-
-**Uwaga / Anty-wzorzec:**
-Założenie, że jeśli wymagania są 'well defined', to implementacja przez model pójdzie dobrze. Ocena stopnia zdefiniowania wymagań i resztkowej dwuznaczności w trakcie implementacji jest subiektywna i trudna — sam ten warunek nie jest weryfikowalny, więc nie chroni przed błędami. Bez kwantyfikacji pewności nie masz progu odcięcia dla niepewnych odpowiedzi.
-
-> **Cytat:** *"not always - but for some cases yes, the judgment on whether requirements are “well defined” enough and how much ambiguity still exists during the implementation phase is not easy to answer
-
-the extra nice thing about jev is that it quantifies the confidence, so i can say “if it’s not confident the i discard its answer”"*
-
----
-
-## Architektura systemów AI / Agent Design
-
-### Architektura hybrydowa: logika deterministyczna + model decyzyjny zamiast pętli agentowych LLM
-
-- **Data:** `Thu Sep 17 06:45:30 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100476218512748616)
-- **Rodzaj:** Komentarz w dyskusji (@v10se)
-- **Powiązane pojęcia:** [[Harness|Agent Loops]] [[Harness|Deterministic Logic]] [[Harness|Hybrid Architecture]] [[TypeSafe — przewodnik praktyczny|LLM Cost Reduction]] [[Jev|Decision Model vs LLM]]
-
-**Kontekst / Problem:**
-Kun Chen odpowiada w komentarzu pod wpisem @v10se, odnosząc się do pojawienia się czegoś (prawdopodobnie modelu/mechanizmu o nazwie 'Jev') zdolnego zastępować wywołania LLM. Wskazuje dwie konsekwencje tego zjawiska: oczywistą (redukcja kosztów) oraz nieoczywistą (wymuszenie innego myślenia o architekturze oprogramowania). Problem, który rozwiązuje: domyślne budowanie wszystkiego jako pętli agentowych z LLM jest kosztowne i nadmiernie złożone.
-
-**Rada inżynierska:**
-Rozdzielaj odpowiedzialności w systemie na trzy warstwy: (1) logika deterministyczna w kodzie — sterowanie przepływem i reguły, (2) wyspecjalizowany model decyzyjny (np. 'Jev') — podejmowanie decyzji, (3) LLM — tylko okazjonalne generowanie treści. Zastępowanie wywołań LLM tańszymi komponentami to ogromna oszczędność, ale kluczowa wartość to wymuszenie architektury, w której LLM nie jest domyślnym centrum sterowania. Zamiast pętli agentowej buduj pipeline, gdzie decyzje podejmuje dedykowany, tańszy mechanizm, a generacja treści jest zdarzeniem wyjątkowym, nie regułą.
-
-**Uwaga / Anty-wzorzec:**
-Anty-wzorzec: traktowanie LLM jako domyślnego silnika decyzyjnego i budowanie wszystkiego wokół pętli agentowych ('LLMs make us all build agent loops'). Prowadzi to do wysokich kosztów, nieprzewidywalności i niepotrzebnej złożoności tam, gdzie wystarczyłaby deterministyczna logika lub prostszy model decyzyjny.
-
-> **Cytat:** *"right now i'm seeing two - the most obvious implication is cost reduction. it's a massive saving whenever we can replace LLM calls with this. the non-obvious one is that it forces us to think about our software differently. LLMs make us all build agent loops. this enables us to explore a different architecture - a combination of deterministic logic (code), intelligent decision making (Jev), and occasional generation of content (LLM)"*
-
----
-
-## Architektura harnessów i routing zadań / optymalizacja kosztów i latencji
-
-### Zastąpienie dispatchu opartego na LLM szybkim dedykowanym modelem (Jev) w orkiestratorze Firstmate
-
-- **Data:** `Thu Sep 17 06:16:35 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100468943853085061)
-- **Rodzaj:** Wpis autorski
-- **Powiązane pojęcia:** [[Prompt Architecture]] [[Jev|Task Routing]] [[Firstmate Agent|Orchestrator Agent]] [[Context Compaction|Tool Calls]] [[Stabilność modeli i przestrzeganie promptu|Reasoning Effort]] [[TypeSafe i Jev — wywiad z Diogo Almeidą|Model Distillation]] [[TypeSafe — przewodnik praktyczny|Latency Optimization]] [[TypeSafe — przewodnik praktyczny|Cost Optimization]] [[Eval Set z realnych sesji|Eval Set]] [[Firstmate Agent|Firstmate]] [[Harness]]
-
-**Kontekst / Problem:**
-Firstmate to orkiestrator, który przydziela każde zadanie do odpowiedniego agenta (permutacja: harness + model + reasoning effort) na podstawie preferencji użytkownika. Domyślnie decyzję routingu podejmował agent LLM: musiał 'pomyśleć', wykonać tool calls (odczyt reguł dispatchu, danych o kwotach itd.), a dopiero potem dispatchować. Było to wolne i kosztowało tokeny LLM. Kun zastąpił ten proces dedykowanym, wyspecjalizowanym modelem Jev.
-
-**Rada inżynierska:**
-Decyzje routingu/dyspatcherowania, które są deterministyczne i oparte na regułach + danych (reguły dispatchu, limity kwot), nie powinny być podejmowane przez ogólny LLM z reasoningiem i tool calls — można je skompilować do małego, dedykowanego modelu. Kun zmierzył: ten sam wynik co model 'fable level' na 25 ocenianych zadaniach, ~200 ms na decyzję, bez myślenia i bez tool calls. W całym procesie dispatchu (wliczając wciąż potrzebny tool call wywołujący Jev przez agenta LLM) dało to -71% kosztu i -90% wall time; jeśli patrzeć tylko na zastąpiony fragment, oszczędność jest rzędu ~100x. Koszt samych wywołań API Jev jest praktycznie zerowy (100+ wywołań, dashboard wciąż pokazuje $0.01). Wniosek architektoniczny: LLM to tylko mały element systemu — warto wydzielać z niego warstwy decyzyjne na rzecz taniej, szybkiej, wyspecjalizowanej komponenty.
-
-**Uwaga / Anty-wzorzec:**
-Anty-wzorzec: używanie ogólnego LLM z reasoningiem i tool calls do podejmowania decyzji, które są w istocie deterministyczne (routing wg reguł i danych) — to wolne, kosztowne i niepotrzebnie angażuje tokeny. Dodatkowa ostrożność: wynik oparto na ewaluacji tylko 25 zadań, więc zgodność z zachowaniem 'fable level' (25/25 identycznych odpowiedzi) ma ograniczony zakres — przed produkcyjnym wdrożeniem warto rozszerzyć zbiór ewaluacyjny i monitorować rozjazdy decyzji. Należy też pamiętać, że wywołanie Jev nadal wymaga tool call po stronie agenta LLM — całkowitej eliminacji LLM z pętli nie ma.
-
-> **Cytat:** *"alright - just got Jev deployed for a real production use case, which now performs at fable level quality but 10x faster and saves a ton of money ... by default, that's done by the firstmate agent and the LLM would have to do some thinking, make tool calls to read dispatch rules, quota data etc and then do the dispatch. this is slow and does cost a bit of LLM tokens. i just replaced this dispatch process with Jev. it makes the same decision with no thinking or tool calls, done in ~200ms, and for the 25 tasks i evaluated this with, it gives the exact same answer fable would have given... ... even with that counted, the saving from Jev still resulted in a -71% reduction in cost and -90% reduction in wall time of completing the whole dispatching process ... if we just look at the part Jev replaced and not the whole system, then the saving is on the magnitude of ~100x ... if you also have Jev and you use firstmate, set TYPESAFE_API_KEY in your .env file in your firstmate repo to activate this"*
-
----
-
-## Architektura systemów agentowych / Routing modeli i koszty
-
-### Tania orkiestracja + eskalacja niejednoznaczności do modelu wysokiej klasy
-
-- **Data:** `Wed Sep 16 05:09:51 +0000 2026` | **Źródło:** [Post na X](https://x.com/kunchenguid/status/2100089760475930830)
-- **Rodzaj:** Komentarz w dyskusji (@Steve_Yegge)
-- **Powiązane pojęcia:** [[Jev|Model Routing]] [[Firstmate Agent|Agent Orchestration]] [[Jev|Escalation Policy]] [[TypeSafe — przewodnik praktyczny|Cost-Aware Agent Design]] [[Firstmate Agent|LLM-as-Orchestrator]] [[Prompt Architecture]] [[Stabilność modeli i przestrzeganie promptu|Model Tiering]]
-
-**Kontekst / Problem:**
-Kun Chen odpowiada pod wpisem @Steve_Yegge, dzieląc się obserwacją z wielomiesięcznej pracy z własnym agentem-orchestratorem ('firstmate'). Problem: przypisywanie modeli najwyższej klasy (określanych jako 'fable tier') do rutynowych zadań orkiestracyjnych — typu sekwencyjne odpalanie kroków ('task 1 się skończył, odpal task 2') — drastycznie podnosi koszt bez zysku jakościowego. Rozwiązanie: tani model do orkiestracji, ale z twardym sterowaniem eskalacją.
-
-**Rada inżynierska:**
-Rozdziel role według poziomu poznawczej złożoności, nie według wygody. Orkiestrację, sekwencjonowanie kroków i rutynowy routing oddaj tanim modelom. Modelom wysokiej klasy ('fable tier') zostaw wyłącznie decyzje wymagające rozumowania: niejednoznaczne wybory, konflikty wymagań, planowanie. Kluczowy element to NIE sam podział, a wymuszenie eskalacji: zaprojektuj prompt taniego orkiestratora tak, by agresywnie kierował niejednoznaczne decyzje w górę hierarchii modeli. Kun raportuje, że ta eskalacja robi 'zaskakująco dużą różnicę' i nie pogarsza ogólnej jakości systemu.
-
-**Uwaga / Anty-wzorzec:**
-Anty-wzorzec: 'wisdom inflation' — używanie modelu najwyższej klasy do zadań orkiestracyjnych niskiej złożoności (np. 'task 1 finished, kick off task 2'). Prowadzi to do nieosiągalnego kosztu ('untenable cost') bez poprawy jakości. Drugi, ukryty anty-wzorzec: sam podział na taniego orkiestratora bez mechanizmu eskalacji — tani model zacznie samodzielnie rozstrzygać sprawy, których rozstrzygać nie powinien.
-
-> **Cytat:** *"having been working with my firstmate for months, i learned one of the biggest traps is that we may put fable tier models on many mundane orchestration-ish tasks (like “oh task 1 finished let me kick off task 2”) that really don’t need fable level wisdom. that’s what makes the cost untenable
-
-i’m having great success with using a cheap model for orchestration and heavily steer it to escalate ambiguous decisions to fable, which makes a surprisingly big difference without compromising the overall quality of the system"*
 
 ---

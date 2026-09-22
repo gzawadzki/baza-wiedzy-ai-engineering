@@ -36,8 +36,8 @@ MODEL_NAME = os.getenv("MODEL_NAME", "~deepseek/deepseek-flash-latest")
 TYPESAFE_API_KEY = os.getenv("TYPESAFE_API_KEY")
 TYPESAFE_BASE_URL = os.getenv("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 JEV_MODEL = os.getenv("JEV_MODEL", "jev-latest")
-JEV_VALUABLE_THRESHOLD = float(os.getenv("JEV_VALUABLE_THRESHOLD", "0.65"))
-JEV_BATCH_SIZE = int(os.getenv("JEV_BATCH_SIZE", "25"))
+JEV_SCORE_THRESHOLD = float(os.getenv("JEV_SCORE_THRESHOLD", "1.35"))
+JEV_BATCH_SIZE = int(os.getenv("JEV_BATCH_SIZE", "20"))
 MAX_LLM_WORKERS = int(os.getenv("MAX_LLM_WORKERS", "4"))
 DEFAULT_HANDLE = os.getenv("TWITTER_HANDLE", "kunchenguid")
 CACHE_FILE = Path(__file__).parent / f"{DEFAULT_HANDLE}_raw_tweets.json"
@@ -207,13 +207,13 @@ def normalize_tweet(item: Dict[str, Any], handle: str) -> Optional[Dict[str, Any
     }
 
 
-def evaluate_with_jev(tweets: List[Dict[str, Any]], threshold: float) -> List[Tuple[Dict[str, Any], float]]:
-    """Używa Jev (TypeSafe System One) jako szybkiego filtra wartościowych wpisów."""
+def evaluate_with_jev(tweets: List[Dict[str, Any]], min_score: float = 1.35) -> List[Tuple[Dict[str, Any], float, str]]:
+    """Używa Jev (TypeSafe System One) z dwuwymiarową oceną: Score (gęstość techniczna) + Choice (kategoria/odrzucenie)."""
     if not TYPESAFE_API_KEY:
-        print("[!] Brak TYPESAFE_API_KEY — pomijam filtr Jev i wysyłam wszystkie wpisy do LLM.")
-        return [(tweet, 1.0) for tweet in tweets]
+        print("[*] Brak TYPESAFE_API_KEY — pomijam filtr Jev i kieruję wszystkie rekordy do analizy LLM.")
+        return [(tweet, 2.0, "general") for tweet in tweets]
 
-    selected: List[Tuple[Dict[str, Any], float]] = []
+    selected: List[Tuple[Dict[str, Any], float, str]] = []
     endpoint = f"{TYPESAFE_BASE_URL.rstrip('/')}/v1/systemone"
 
     for start in range(0, len(tweets), JEV_BATCH_SIZE):
@@ -231,22 +231,37 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], threshold: float) -> List[Tu
                 for tw in batch
             ]
         }
-        questions = {
-            f"tweet_{i}": {
-                "type": "noul",
+        
+        # Zgodnie z zasadami TypeSafe:
+        # 1. Score do gradacji użyteczności inżynierskiej (poziomy o konkretnym znaczeniu)
+        # 2. Choice do klasyfikacji domeny merytorycznej lub odrzucenia (w tym opcja no-match: none_of_these)
+        questions = {}
+        for i in range(len(batch)):
+            questions[f"score_{i}"] = {
+                "type": "score",
                 "instructions": (
-                    f"Does `tweets[{i}]` contain a substantive AI engineering insight from Kun Chen "
-                    "worth extracting into a technical knowledge base? Consider prompt architecture, "
-                    "model behavior, harnesses, verification, evaluation, agent loops, tooling, or concrete anti-patterns. "
-                    "If it is a reply, use parent_text as context."
+                    f"Rate the substantive engineering utility of `tweets[{i}]` for an AI Engineering knowledge base. "
+                    "Evaluate whether it delivers concrete architectural rules, model behavioral insights, "
+                    "agent harness practices, context window tactics, or verifiable production anti-patterns."
                 ),
-                "criteria": {
-                    "true": "Concrete technical advice, explanation, warning, or reusable engineering heuristic.",
-                    "false": "Small talk, thanks, meme, marketing, vague comment, or no actionable technical content."
-                },
+                "criteria": [
+                    "No technical utility: casual chatter, social gratitude, generic reaction, or empty meme.",
+                    "Marginal technical utility: broad opinion, high-level commentary, or non-actionable observation.",
+                    "High technical utility: concrete heuristic, specific architectural rule, failure mode analysis, or actionable engineering guidance."
+                ],
             }
-            for i in range(len(batch))
-        }
+            questions[f"topic_{i}"] = {
+                "type": "choice",
+                "instructions": f"Identify the primary technical subject matter discussed in `tweets[{i}]`.",
+                "criteria": {
+                    "context_compaction": "Context window limits, session compaction, safe checkpoints, tool output pruning, caching.",
+                    "agent_orchestration": "Multi-agent systems, Firstmate, leaf node agents, task routing, coordination tradeoffs.",
+                    "prompt_and_models": "Prompt architecture, system prompt adherence, model spikiness vs stability, evaluation metrics.",
+                    "verification_and_harness": "Harness engineering, code review rules, step-by-step verification, test bypass prevention.",
+                    "none_of_these": "Not technical, trivial social comment, off-topic, or lacks substantive AI engineering substance."
+                }
+            }
+
         payload = json.dumps({"model": JEV_MODEL, "state": state, "questions": questions}).encode("utf-8")
         request = urllib.request.Request(
             endpoint,
@@ -259,7 +274,7 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], threshold: float) -> List[Tu
             method="POST",
         )
 
-        print(f"[*] Jev filtruje batch {start + 1}-{start + len(batch)} / {len(tweets)}...")
+        print(f"[*] Jev ocenia wielowymiarowo batch {start + 1}-{start + len(batch)} / {len(tweets)}...")
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
                 data = json.loads(response.read().decode("utf-8"))
@@ -269,11 +284,18 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], threshold: float) -> List[Tu
 
         answers = data.get("answers", {})
         for i, tw in enumerate(batch):
-            probability = float(answers.get(f"tweet_{i}", {}).get("noul", 0.0))
-            if probability >= threshold:
-                selected.append((tw, probability))
+            score_ans = answers.get(f"score_{i}", {})
+            topic_ans = answers.get(f"topic_{i}", {})
 
-    print(f"[+] Jev wybrał {len(selected)} / {len(tweets)} wpisów (próg noul >= {threshold:.2f}).")
+            score_val = float(score_ans.get("score", 0.0))
+            topic_choice = topic_ans.get("choice", "none_of_these")
+            topic_confidence = float(topic_ans.get("confidence", 0.0))
+
+            # Kompozycja osądów: odrzucamy rekordy poniżej progu jakości lub sklasyfikowane jako nietechniczne
+            if score_val >= min_score and topic_choice != "none_of_these":
+                selected.append((tw, score_val, topic_choice))
+
+    print(f"[+] Jev wyselekcjonował {len(selected)} / {len(tweets)} wpisów (Score >= {min_score:.2f} & Choice != none_of_these).")
     return selected
 
 
@@ -295,6 +317,9 @@ Twoim celem jest wyciągnięcie GĘSTEJ, PRAKTYCZNEJ WIEDZY inżynierskiej do ba
 - Obserwacje zachowania modeli (drift, saturation, reasoning loops),
 - Praktyki harnessów, zewnętrznych weryfikatorów, weryfikacji krokowej,
 - Wykrywanie anty-wzorców (co ludzie robią źle).
+
+ZASADA AKTUALNOŚCI WIEDZY:
+Jeżeli wnioski, obserwacje lub zalecenia stoją w sprzeczności z wcześniejszymi wpisami (np. zmiana zdania na temat modelu, nowe doświadczenia z dłuższą pracą z harnessem, ewolucja podejścia do kontekstu), uznaj, że nowszy wpis odzwierciedla zaktualizowany stan wiedzy i najnowsze ustalenia inżynierskie. Wskaż tę ewolucję w polu `tip` lub `context_summary`.
 
 Zignoruj:
 - Zwykły small talk, krótkie potwierdzenia ("Yes, exactly", "Thanks!"),
@@ -470,8 +495,8 @@ def main():
     parser.add_argument(
         "--jev-threshold",
         type=float,
-        default=JEV_VALUABLE_THRESHOLD,
-        help=f"Próg prawdopodobieństwa Jev dla wartościowych wpisów (domyślnie: {JEV_VALUABLE_THRESHOLD})",
+        default=JEV_SCORE_THRESHOLD,
+        help=f"Próg minimalnego Score Jev dla wartościowych wpisów (skala 0-2, domyślnie: {JEV_SCORE_THRESHOLD})",
     )
     parser.add_argument(
         "--llm-workers",
@@ -528,30 +553,30 @@ def main():
 
     print(f"[*] Przesortowano {len(normalized_tweets)} merytorycznych wpisów do analizy...")
 
-    # 3. Szybki filtr Jev przed droższą ekstrakcją generatywną
+    # 3. Wielowymiarowy filtr TypeSafe Jev (Score + Choice)
     if args.skip_jev:
-        candidates = [(tw, 1.0) for tw in normalized_tweets]
+        candidates = [(tw, 2.0, "unfiltered") for tw in normalized_tweets]
         print("[*] Pominięto filtr Jev (--skip-jev).")
     else:
-        candidates = evaluate_with_jev(normalized_tweets, args.jev_threshold)
+        candidates = evaluate_with_jev(normalized_tweets, min_score=args.jev_threshold)
 
     # 4. Równoległa analiza przez LLM / DeepSeek
     valuable_results = []
     workers = max(1, args.llm_workers)
     print(f"[*] Analiza LLM {len(candidates)} kandydatów równolegle (workers={workers}, model={MODEL_NAME})...")
 
-    def analyze_candidate(candidate: Tuple[Dict[str, Any], float]) -> Optional[Dict[str, Any]]:
-        tw, jev_probability = candidate
+    def analyze_candidate(candidate: Tuple[Dict[str, Any], float, str]) -> Optional[Dict[str, Any]]:
+        tw, jev_score, jev_topic = candidate
         tip_obj = analyze_with_llm(tw)
         if tip_obj and tip_obj.is_valuable:
-            return {"tweet": tw, "tip_obj": tip_obj, "jev_probability": jev_probability}
+            return {"tweet": tw, "tip_obj": tip_obj, "jev_score": jev_score, "jev_topic": jev_topic}
         return None
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         future_to_candidate = {executor.submit(analyze_candidate, candidate): candidate for candidate in candidates}
         total = len(future_to_candidate)
         for idx, future in enumerate(as_completed(future_to_candidate), 1):
-            tw, jev_probability = future_to_candidate[future]
+            tw, jev_score, jev_topic = future_to_candidate[future]
             try:
                 result = future.result()
             except Exception as e:
@@ -561,16 +586,15 @@ def main():
             if result:
                 title = result["tip_obj"].title
                 category = result["tip_obj"].category
-                print(f"[{idx}/{total}] -> [Wartościowy] {title} ({category}) | Jev={jev_probability:.2f}")
+                print(f"[{idx}/{total}] -> [Wartościowy] {title} ({category}) | JevScore={jev_score:.2f} [{jev_topic}]")
                 valuable_results.append(result)
             else:
-                print(f"[{idx}/{total}] -> Pominięto po LLM ({tw['url']}) | Jev={jev_probability:.2f}")
+                print(f"[{idx}/{total}] -> Pominięto po LLM ({tw['url']}) | JevScore={jev_score:.2f} [{jev_topic}]")
 
     print(f"\n[+] Znaleziono {len(valuable_results)} wartościowych wskazówek z {len(normalized_tweets)} wpisów.")
 
-    # Zachowaj kolejność źródłową w wynikowym Markdown
-    order = {tw["url"]: idx for idx, tw in enumerate(normalized_tweets)}
-    valuable_results.sort(key=lambda item: order.get(item["tweet"]["url"], 10**9))
+    # Zachowaj chronologiczny porządek (najnowsze na górze)
+    valuable_results.sort(key=lambda item: item["tweet"].get("date", ""), reverse=True)
 
     # 5. Generowanie Markdown do Obsidiana
     root_dir = Path(__file__).parent.parent
