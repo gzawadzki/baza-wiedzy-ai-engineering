@@ -1,16 +1,16 @@
-# Python / Środowisko
+# Python / Srodowisko
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
 .venv/
 
-# Klucze i konfiguracja
-scripts/.env
+# Konfiguracja i sekrety
+extractor/.env
 .env
 
 # Cache danych z Twittera
-scripts/*_raw_tweets.json
+extractor/*_raw_tweets.json
 
-# Obsidian workspace
-.obsidian/workspace*
+# Obsidian workspace cache
+vault/.obsidian/workspace*

@@ -406,7 +406,7 @@ def generate_obsidian_markdown(
                 md.append(f"**Rada inżynierska:**\n{t.tip}\n")
 
             if t.pitfall:
-                md.append(f"**⚠️ Pułapka / Anty-wzorzec:**\n{t.pitfall}\n")
+                md.append(f"**Uwaga / Anty-wzorzec:**\n{t.pitfall}\n")
 
             if t.original_quote:
                 md.append(f"> **Cytat:** *\"{t.original_quote}\"*\n")
@@ -447,7 +447,7 @@ def main():
     )
     parser.add_argument(
         "--output",
-        default="Źródła/Kun Chen — Baza Wskazówek i Komentarzy.md",
+        default="vault/Źródła/Kun Chen — Baza Wskazówek i Komentarzy.md",
         help="Ścieżka pliku wyjściowego w Obsidianie",
     )
     parser.add_argument(

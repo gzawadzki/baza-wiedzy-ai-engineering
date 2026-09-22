@@ -1,37 +1,25 @@
-# AI Engineering Knowledge Base & Obsidian Extractor
+# AI Engineering Knowledge Repository and Intelligence Pipeline
 
-Wiedza techniczna o inżynierii systemów AI, agentach, architekturze kontekstu oraz narzędzia automatyzacji ekstrakcji wiedzy do formatu Obsidiana.
+Welcome to this comprehensive repository designed to unlock actionable technical paradigms in AI engineering, autonomous agent orchestration, and context curation for Obsidian.
 
----
+## Repository Architecture
 
-## 🚀 Co znajduje się w repozytorium
+This multi-faceted project is decoupled into two purpose-built directories:
 
-### 1. Automatyczny Ekstraktor Wiedzy z X/Twittera (`scripts/`)
-Zaawansowany pipeline do destylacji wiedzy inżynierskiej:
-- **Apify** do pobierania autorskich wpisów i technicznych komentarzy (replies),
-- **TypeSafe Jev** (model System One) jako błyskawiczny filtr wstępny oceniający potencjał merytoryczny wpisu (`noul`),
-- **Równoległe wywołania DeepSeek / LLM** (`ThreadPoolExecutor`) do precyzyjnej ekstrakcji reguł, anty-wzorców i cytatów,
-- **Automatyczny eksport do Markdown Obsidiana** z kategoryzacją i spójną siecią wikilinków.
+- `extractor/`: An automated pipeline utilizing Apify, TypeSafe Jev (System One classification), and parallelized DeepSeek inference to streamline Twitter insights directly into Markdown.
+- `vault/`: A dedicated Obsidian knowledge graph centered on agent harnesses, step-by-step verification, context compaction boundaries, and model stability heuristics.
 
-Więcej szczegółów w [scripts/README.md](scripts/README.md).
+## Quickstart
 
-### 2. Vault Obsidiana — Architektura i Pojęcia
-Ustrukturyzowana baza pojęć inżynierii agentowej:
-- **Architektura kontekstu:** `Context Compaction`, `Bezpieczny punkt kompaktowania`, `Persistencja stanu agenta`, `Interpretable Context Methodology (ICM)`.
-- **Systemy agentowe:** `Firstmate i Agenci Wykonawczy`, `CI Check Bypass Confirmation`, `Prompt Architecture`, `Stabilność modeli i przestrzeganie promptu`.
-- **Weryfikacja i ewaluacja:** `Rework Rate`, `Selektywna weryfikacja kodu (no-mistakes)`, `Eval Set z realnych sesji`, `Weryfikator`, `Harness`.
-- **Modele i narzędzia:** `Jev`, `TypeSafe — przewodnik praktyczny`, `LM Studio i OpenRouter`.
-
----
-
-## 🛠️ Szybki start ze skryptem
+### 1. Launching the Extractor
 
 ```bash
-cd scripts
+cd extractor
 pip install -r requirements.txt
 cp .env.example .env
-# uzupełnij klucze w .env (Apify, OpenRouter/DeepSeek, TypeSafe)
 python extract_kunchen_tips.py --analyze-only
 ```
 
-Zacznij przeglądanie bazy od `00 Start.md`.
+### 2. Navigating the Vault
+
+Open the `vault/` directory directly within the Obsidian desktop application. The root index is situated at `vault/00 Start.md`.
