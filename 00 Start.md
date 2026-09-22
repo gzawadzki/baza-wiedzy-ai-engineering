@@ -37,6 +37,7 @@ Vault gromadzi trwałą wiedzę o projektowaniu systemów AI. Notatki powinny by
 
 - [[TypeSafe i Jev — wywiad z Diogo Almeidą]]
 - [[Kun Chen — Baza Wskazówek i Komentarzy]]
+- [[Rekomendowani praktycy AI Engineering]]
 
 ## Reguła kwalifikacji
 
