@@ -1,17 +1,13 @@
 # AI Engineering Knowledge Repository and Intelligence Pipeline
 
-Welcome to this comprehensive repository designed to unlock actionable technical paradigms in AI engineering, autonomous agent orchestration, and context curation for Obsidian.
+Wiedza o inżynierii systemów AI, architekturze kontekstu i orkiestracji agentów w Obsidianie z automatycznym modułem ekstrakcji z X/Twittera.
 
-## Repository Architecture
+## Struktura projektu
 
-This multi-faceted project is decoupled into two purpose-built directories:
+- `extractor/` — skrypt Python pobierający tweety przez Apify, z wielowymiarowym filtrem TypeSafe Jev (Score + Choice) oraz równoległą analizą DeepSeek / LLM.
+- `Pojęcia/`, `Narzędzia/`, `Procesy/`, `Zasady/`, `Źródła/` — bezpośrednia zawartość skarbca Obsidiana (`00 Start.md` jako punkt wejścia).
 
-- `extractor/`: An automated pipeline utilizing Apify, TypeSafe Jev (System One classification), and parallelized DeepSeek inference to streamline Twitter insights directly into Markdown.
-- `vault/`: A dedicated Obsidian knowledge graph centered on agent harnesses, step-by-step verification, context compaction boundaries, and model stability heuristics.
-
-## Quickstart
-
-### 1. Launching the Extractor
+## Uruchomienie ekstraktora
 
 ```bash
 cd extractor
@@ -19,7 +15,3 @@ pip install -r requirements.txt
 cp .env.example .env
 python extract_kunchen_tips.py --analyze-only
 ```
-
-### 2. Navigating the Vault
-
-Open the `vault/` directory directly within the Obsidian desktop application. The root index is situated at `vault/00 Start.md`.

@@ -479,7 +479,7 @@ def main():
     )
     parser.add_argument(
         "--output",
-        default="vault/Źródła/Kun Chen — Baza Wskazówek i Komentarzy.md",
+        default="Źródła/Kun Chen — Baza Wskazówek i Komentarzy.md",
         help="Ścieżka pliku wyjściowego w Obsidianie",
     )
     parser.add_argument(

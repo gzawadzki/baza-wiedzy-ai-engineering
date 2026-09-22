@@ -13,4 +13,4 @@ extractor/.env
 extractor/*_raw_tweets.json
 
 # Obsidian workspace cache
-vault/.obsidian/workspace*
+.obsidian/workspace*
