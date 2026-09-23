@@ -309,7 +309,7 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], min_score: float = 1.35) -> 
     return selected
 
 
-def analyze_with_llm(tweet: Dict[str, Any]) -> Optional[ExtractedTip]:
+def analyze_with_llm(tweet: Dict[str, Any], handle: str = "autor") -> Optional[ExtractedTip]:
     """Wysyła pojedynczy wpis/komentarz do LLM w celu ekstrakcji porady."""
     if not OPENAI_API_KEY:
         raise ValueError("Brak OPENAI_API_KEY w pliku .env lub zmiennych środowiskowych.")
@@ -321,42 +321,40 @@ def analyze_with_llm(tweet: Dict[str, Any]) -> Optional[ExtractedTip]:
         base_url=OPENAI_BASE_URL,
     )
 
-    system_prompt = """Jesteś starszym inżynierem AI analizującym wpisy i komentarze Kuna Chena (@kunchenguid) na Twitterze/X.
-Twoim celem jest wyciągnięcie GĘSTEJ, PRAKTYCZNEJ WIEDZY inżynierskiej do bazy wiedzy w Obsidianie:
-- Konkretne zasady tworzenia promptów (prompt architecture),
-- Obserwacje zachowania modeli (drift, saturation, reasoning loops),
-- Praktyki harnessów, zewnętrznych weryfikatorów, weryfikacji krokowej,
+    system_prompt = f"""Jesteś starszym inżynierem AI analizującym wpisy i komentarze autora @{handle} na Twitterze/X.
+Wpisy mogą być w języku ANGIELSKIM, CHIŃSKIM (uproszczonym/tradycyjnym) lub polskim.
+Twoim celem jest wyciągnięcie GĘSTEJ, PRAKTYCZNEJ WIEDZY inżynierskiej do bazy wiedzy w Obsidianie w JĘZYKU POLSKIM:
+- Konkretne zasady tworzenia promptów i kompilacji (prompt architecture),
+- Obserwacje zachowania modeli (drift, saturation, MoE, attention, latency, token throughput),
+- Architektura harnessów, systemów agentowych, zewnętrznych weryfikatorów,
+- Inżynieria kontekstu, zarządzanie pamięcią, cache i benchmarking,
 - Wykrywanie anty-wzorców (co ludzie robią źle).
 
-ZASADA AKTUALNOŚCI WIEDZY:
-Jeżeli wnioski, obserwacje lub zalecenia stoją w sprzeczności z wcześniejszymi wpisami (np. zmiana zdania na temat modelu, nowe doświadczenia z dłuższą pracą z harnessem, ewolucja podejścia do kontekstu), uznaj, że nowszy wpis odzwierciedla zaktualizowany stan wiedzy i najnowsze ustalenia inżynierskie. Wskaż tę ewolucję w polu `tip` lub `context_summary`.
+ZASADA WIELOJĘZYCZNOŚCI:
+Jeśli wpis jest po chińsku lub angielsku, przetłumacz i zsyntetyzuj jego sens na precyzyjny, profesjonalny język polski inżynierii oprogramowania. Cytat (`original_quote`) pozostaw w oryginalnym brzmieniu (po chińsku lub angielsku).
+
+ZASADA AKTUALNOŚCI I KWESTII SPORNYCH:
+1. Jeżeli wnioski stoją w sprzeczności z wcześniejszymi wpisami, uznaj, że nowszy wpis odzwierciedla zaktualizowany stan wiedzy.
+2. Jeśli autor podważa powszechny konsensus branżowy, krytykuje popularne podejście lub formułuje tezę kontrowersyjną, ustaw `has_conflict: true` i opisz w `conflict_notes` istotę sporu do rozstrzygnięcia.
 
 Zignoruj:
-- Zwykły small talk, krótkie potwierdzenia ("Yes, exactly", "Thanks!"),
-- Ogólne pytania bez odpowiedzi,
-- Wpisy o charakterze czysto towarzyskim lub marketingowym.
-
-Wartościowe są:
-- Wnioski z eksperymentów,
-- Wskazówki dlaczego dane podejście zawodzi w produkcji,
-- Odpowiedzi Kuna Chena prostujące błędy innych programistów.
-
-Jeśli wpis jest odpowiedzią (reply), koniecznie uwzględnij kontekst posta, na który Kun odpowiada.
+- Zwykły small talk, krótkie potwierdzenia ("Yes", "cool", "ty"),
+- Wpisy o charakterze czysto towarzyskim lub marketingowym bez szczegółów technicznych.
 
 Zwróć odpowiedź w formacie JSON zgodnym ze schematem."""
 
     # Budowa kontekstu wiadomości
-    user_content = f"Data wpisu: {tweet['date']}\nLink: {tweet['url']}\n"
+    user_content = f"Autor: @{handle}\nData wpisu: {tweet['date']}\nLink: {tweet['url']}\n"
     if tweet["is_reply"]:
         user_content += f"TYP: Komentarz / Odpowiedź pod wpisem innego użytkownika (@{tweet['parent_user'] or 'unknown'})\n"
         if tweet["parent_text"]:
-            user_content += f"TREŚĆ POSTA NADRZĘDNEGO (na co odpowiada Kun Chen):\n\"{tweet['parent_text']}\"\n\n"
+            user_content += f"TREŚĆ POSTA NADRZĘDNEGO (na co odpowiada autor):\n\"{tweet['parent_text']}\"\n\n"
         else:
             user_content += "(Brak bezpośredniej treści posta nadrzędnego, oceń kontekst z samej odpowiedzi)\n\n"
     else:
-        user_content += "TYP: Autorski wpis / wątek Kuna Chena\n\n"
+        user_content += f"TYP: Autorski wpis / wątek @{handle}\n\n"
 
-    user_content += f"TREŚĆ WPISU KUNA CHENA:\n\"{tweet['text']}\"\n"
+    user_content += f"TREŚĆ WPISU @{handle}:\n\"{tweet['text']}\"\n"
 
     # Wywołanie modelu
     response = client.chat.completions.create(
@@ -596,7 +594,7 @@ def main():
 
     def analyze_candidate(candidate: Tuple[Dict[str, Any], float, str]) -> Optional[Dict[str, Any]]:
         tw, jev_score, jev_topic = candidate
-        tip_obj = analyze_with_llm(tw)
+        tip_obj = analyze_with_llm(tw, handle=args.handle)
         if tip_obj and tip_obj.is_valuable:
             return {"tweet": tw, "tip_obj": tip_obj, "jev_score": jev_score, "jev_topic": jev_topic}
         return None

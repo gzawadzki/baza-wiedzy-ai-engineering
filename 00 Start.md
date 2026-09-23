@@ -39,6 +39,10 @@ Vault gromadzi trwałą wiedzę o projektowaniu systemów AI. Notatki powinny by
 - [[Kun Chen — Baza Wskazówek i Komentarzy]]
 - [[HamelHusain — Baza Wskazówek i Komentarzy]]
 - [[simonw — Baza Wskazówek i Komentarzy]]
+- [[karminski3 — Baza Wskazówek i Komentarzy]]
+- [[teortaxesTex — Baza Wskazówek i Komentarzy]]
+- [[DrJimFan — Baza Wskazówek i Komentarzy]]
+- [[JustinLin610 — Baza Wskazówek i Komentarzy]]
 - [[Rekomendowani praktycy AI Engineering]]
 
 ## Reguła kwalifikacji
