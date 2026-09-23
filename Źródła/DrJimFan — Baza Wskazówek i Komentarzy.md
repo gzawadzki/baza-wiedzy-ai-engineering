@@ -1,6 +1,6 @@
 ---
-autor: @DrJimFan
-źródło: https://x.com/DrJimFan
+autor: "@DrJimFan"
+źródło: "https://x.com/DrJimFan"
 wygenerowano: 2026-09-23 02:11
 typ: synteza-wiedzy
 tagi:

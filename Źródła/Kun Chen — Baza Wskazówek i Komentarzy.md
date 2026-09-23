@@ -1,6 +1,6 @@
 ---
 autor: Kun Chen (@kunchenguid)
-źródło: https://x.com/kunchenguid
+źródło: "https://x.com/kunchenguid"
 wygenerowano: 2026-09-23 01:47
 typ: synteza-wiedzy
 tagi:

@@ -1,6 +1,6 @@
 ---
-autor: @teortaxesTex
-źródło: https://x.com/teortaxesTex
+autor: "@teortaxesTex"
+źródło: "https://x.com/teortaxesTex"
 wygenerowano: 2026-09-23 02:10
 typ: synteza-wiedzy
 tagi:

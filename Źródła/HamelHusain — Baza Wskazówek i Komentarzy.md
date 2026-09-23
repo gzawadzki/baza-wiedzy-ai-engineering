@@ -1,6 +1,6 @@
 ---
-autor: @HamelHusain
-źródło: https://x.com/HamelHusain
+autor: "@HamelHusain"
+źródło: "https://x.com/HamelHusain"
 wygenerowano: 2026-09-23 01:56
 typ: synteza-wiedzy
 tagi:
