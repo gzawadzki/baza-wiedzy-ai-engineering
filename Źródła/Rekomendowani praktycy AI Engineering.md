@@ -1,7 +1,14 @@
 ---
 typ: źródło
 aliases: [AI Engineering Practitioners, Źródła wiedzy AI, Obserwowani eksperci]
-tagi: [ai-engineering, agenci, prompt-engineering, evals, kontekst, harness, zrodla]
+tagi:
+  - ai-engineering
+  - agenci
+  - prompt-engineering
+  - evals
+  - kontekst
+  - harness
+  - zrodla
 ---
 
 # Rekomendowani praktycy AI Engineering do bazy wiedzy

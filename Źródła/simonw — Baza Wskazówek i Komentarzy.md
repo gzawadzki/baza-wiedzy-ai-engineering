@@ -3,7 +3,11 @@ autor: @simonw
 źródło: https://x.com/simonw
 wygenerowano: 2026-09-23 01:57
 typ: synteza-wiedzy
-tagi: [simonw, ai-engineering, prompt-engineering, twitter-extract]
+tagi:
+  - simonw
+  - ai-engineering
+  - prompt-engineering
+  - twitter-extract
 ---
 
 # @simonw — Baza Wskazówek i Komentarzy

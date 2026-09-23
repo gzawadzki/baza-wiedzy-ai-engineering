@@ -1,7 +1,14 @@
 ---
 typ: źródło
 aliases: [Jev — wywiad Latent Space, Diogo Almeida o System One]
-tagi: [TypeSafe, Jev, system-one, kalibracja, agenci, routing, kv-cache]
+tagi:
+  - TypeSafe
+  - Jev
+  - system-one
+  - kalibracja
+  - agenci
+  - routing
+  - kv-cache
 źródła:
   - "[Latent Space — Jev: System One models for Prod, not God](https://www.latent.space/p/jev)"
   - "[TypeSafe — Introducing System One Models & Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev)"

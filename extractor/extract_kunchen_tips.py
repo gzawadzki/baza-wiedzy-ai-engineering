@@ -404,11 +404,15 @@ def generate_obsidian_markdown(
 
     md = []
     md.append("---")
-    md.append(f"autor: @{handle}")
-    md.append(f"źródło: https://x.com/{handle}")
-    md.append(f"wygenerowano: {now_str}")
+    md.append(f"autor: \"@{handle}\"")
+    md.append(f"źródło: \"https://x.com/{handle}\"")
+    md.append(f"wygenerowano: \"{now_str}\"")
     md.append("typ: synteza-wiedzy")
-    md.append(f"tagi: [{handle.lower()}, ai-engineering, prompt-engineering, twitter-extract]")
+    md.append("tagi:")
+    md.append(f"  - {handle.lower()}")
+    md.append("  - ai-engineering")
+    md.append("  - prompt-engineering")
+    md.append("  - twitter-extract")
     md.append("---\n")
 
     md.append(f"# @{handle} — Baza Wskazówek i Komentarzy\n")
