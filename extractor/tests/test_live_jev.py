@@ -17,7 +17,12 @@ from kb_pipeline.jev_provider import (
     JevResponseError,
     JevTransportError,
 )
-from kb_pipeline.live_jev import compute_context_hash, evaluate_live_source
+from kb_pipeline.live_jev import (
+    compute_context_hash,
+    compute_input_hash,
+    compute_policy_version_key,
+    evaluate_live_source,
+)
 from kb_pipeline.schemas import ContextBundle, ContextItem, ContextStatus, SourceRecord
 from kb_pipeline.stage_cache import StageCache
 from kb_pipeline.storage import SourceStore
@@ -146,7 +151,9 @@ def test_evaluate_live_source_success(tmp_path):
     assert _hash_tree(vault) == before_vault
 
     # Check StageCache
-    cache_key = StageCache.key("filter", source.content_hash, summary["context_hash"], "jev-latest", "v1")
+    input_hash = compute_input_hash("x:100", source.content_hash)
+    policy_key = compute_policy_version_key("v1", "v1", 0.7, 0.6)
+    cache_key = StageCache.key("filter", input_hash, summary["context_hash"], "jev-latest", policy_key, schema_version=1)
     with StageCache(workspace) as cache:
         cached = cache.get(cache_key)
         assert cached is not None
@@ -594,3 +601,287 @@ def test_cli_subprocess_ambiguity_resolved_with_content_hash(tmp_path):
     assert result["status"] == "completed"
     assert result["cached"] is True
     assert result["source_hash"] == "2" * 64
+
+
+def test_cache_collision_different_sources_same_content(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    # Same content, different authors and source IDs
+    shared_text = "Prune stale tool output before it consumes the context budget."
+    s1 = make_source("x:100", author="alice", text=shared_text)
+    s2 = make_source("x:200", author="bob", text=shared_text)
+    assert s1.content_hash == s2.content_hash
+
+    with SourceStore(workspace) as store:
+        insert_source(store, s1)
+        insert_source(store, s2)
+
+    # First call for x:100 with extract response
+    transport1 = FakeTransport(response=make_response(topic="compaction", engineering_value=0.95))
+    summary1 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        api_key="test-key",
+        transport=transport1,
+    )
+    assert transport1.call_count == 1
+    assert summary1["source_id"] == "x:100"
+    assert summary1["decision"] == "extract"
+
+    # Second call for x:200 must NOT reuse x:100's cached assessment
+    transport2 = FakeTransport(response=make_response(topic="other", engineering_value=0.10))
+    summary2 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:200",
+        api_key="test-key",
+        transport=transport2,
+    )
+    assert transport2.call_count == 1
+    assert summary2["source_id"] == "x:200"
+    assert summary2["decision"] == "reject"
+    assert summary2["cached"] is False
+
+    # Now verify both are independently cached
+    replay1 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        api_key="test-key",
+        transport=FakeTransport(),
+    )
+    assert replay1["cached"] is True
+    assert replay1["source_id"] == "x:100"
+    assert replay1["decision"] == "extract"
+
+    replay2 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:200",
+        api_key="test-key",
+        transport=FakeTransport(),
+    )
+    assert replay2["cached"] is True
+    assert replay2["source_id"] == "x:200"
+    assert replay2["decision"] == "reject"
+
+
+def test_cache_tracks_policy_and_threshold_changes(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    source = make_source("x:100")
+
+    with SourceStore(workspace) as store:
+        insert_source(store, source)
+
+    # Response with engineering_value = 0.75
+    transport = FakeTransport(response=make_response(engineering_value=0.75, context_sufficient=0.85))
+
+    # Initial evaluation with default threshold 0.7 -> extract
+    s1 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        policy_version="v1",
+        usefulness_threshold=0.7,
+        api_key="test-key",
+        transport=transport,
+    )
+    assert transport.call_count == 1
+    assert s1["decision"] == "extract"
+
+    # Changed threshold to 0.85 -> 0.75 is below 0.85, decision should be defer (borderline)
+    # Must NOT return stale extract from cache!
+    s2 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        policy_version="v1",
+        usefulness_threshold=0.85,
+        api_key="test-key",
+        transport=transport,
+    )
+    assert transport.call_count == 2
+    assert s2["decision"] == "defer"
+
+    # Changed policy_version to "v2" -> must not reuse v1
+    s3 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        policy_version="v2",
+        usefulness_threshold=0.7,
+        api_key="test-key",
+        transport=transport,
+    )
+    assert transport.call_count == 3
+    assert s3["policy_version"] == "v2"
+
+
+def test_context_change_and_immutable_artifacts(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    focus = make_source("x:100", reply_to_id="x:101")
+    parent_v1 = make_source("x:101", text="Parent context version 1", content_hash="a" * 64)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        insert_source(store, parent_v1)
+
+    transport = FakeTransport()
+    s1 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        api_key="test-key",
+        transport=transport,
+    )
+    assert transport.call_count == 1
+    ref1 = s1["artifact_ref"]
+    artifact_path1 = workspace / ref1
+    assert artifact_path1.is_file()
+
+    # Update parent to version 2 (simulating updated single revision in store)
+    with SourceStore(workspace) as store:
+        store.connection.execute("DELETE FROM source_revisions WHERE source_id='x:101'")
+        parent_v2 = make_source("x:101", text="Parent context version 2", content_hash="b" * 64)
+        insert_source(store, parent_v2)
+
+    # Evaluate again: context_hash changes, so provider is invoked and distinct artifact is written
+    s2 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        api_key="test-key",
+        transport=transport,
+    )
+    assert transport.call_count == 2
+    ref2 = s2["artifact_ref"]
+    artifact_path2 = workspace / ref2
+    assert artifact_path2.is_file()
+
+    assert ref1 != ref2
+    assert artifact_path1.is_file()
+    assert artifact_path2.is_file()
+
+
+def test_refresh_preserves_immutable_artifact_refs(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    source = make_source("x:100")
+
+    with SourceStore(workspace) as store:
+        insert_source(store, source)
+
+    transport = FakeTransport()
+    s1 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        api_key="test-key",
+        transport=transport,
+    )
+    ref1 = s1["artifact_ref"]
+    path1 = workspace / ref1
+    assert path1.is_file()
+
+    # Refresh
+    s2 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        api_key="test-key",
+        transport=transport,
+        refresh=True,
+    )
+    ref2 = s2["artifact_ref"]
+    path2 = workspace / ref2
+    assert path2.is_file()
+
+    assert ref1 != ref2
+    assert path1.is_file()
+    assert path2.is_file()
+
+
+def _make_symlink_or_junction(link_path: Path, target_path: Path) -> None:
+    try:
+        link_path.symlink_to(target_path, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        if sys.platform == "win32" and target_path.is_dir():
+            res = subprocess.run(
+                ["cmd", "/c", "mklink", "/J", str(link_path), str(target_path)],
+                capture_output=True,
+                check=False,
+            )
+            if res.returncode != 0:
+                pytest.skip("Symlinks/junctions are unavailable in this environment")
+        else:
+            pytest.skip("Symlinks are unavailable in this environment")
+
+
+def test_artifacts_symlink_inside_vault_fails_closed(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    source = make_source("x:100")
+
+    with SourceStore(workspace) as store:
+        insert_source(store, source)
+
+    artifacts_link = workspace / "artifacts"
+    _make_symlink_or_junction(artifacts_link, vault / "Pojęcia")
+
+    before_vault = _hash_tree(vault)
+    with pytest.raises(ValueError, match="inside the vault"):
+        evaluate_live_source(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:100",
+            api_key="test-key",
+            transport=FakeTransport(),
+        )
+
+    assert _hash_tree(vault) == before_vault
+
+
+def test_validate_safe_artifact_target_mock_symlink(tmp_path, monkeypatch):
+    """Directly test symlink traversal check even when OS symlink creation is restricted."""
+    from kb_pipeline.live_jev import _validate_safe_artifact_target
+
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    target_dir = workspace / "artifacts"
+
+    # Simulate target_dir being a symlink whose resolved path is inside vault
+    monkeypatch.setattr(Path, "is_symlink", lambda self: self == target_dir)
+    monkeypatch.setattr(Path, "resolve", lambda self, strict=False: vault / "Pojęcia" if self == target_dir else self)
+
+    with pytest.raises(ValueError, match="inside the vault"):
+        _validate_safe_artifact_target(target_dir, vault)
+
+
+def test_cli_subprocess_artifacts_symlink_fails_closed(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    source = make_source("x:100")
+
+    with SourceStore(workspace) as store:
+        insert_source(store, source)
+
+    artifacts_link = workspace / "artifacts"
+    _make_symlink_or_junction(artifacts_link, vault / "Pojęcia")
+
+    before_vault = _hash_tree(vault)
+    proc = _run_cli(
+        "--vault", str(vault),
+        "--workspace", str(workspace),
+        "--source-id", "x:100",
+    )
+    assert proc.returncode == 1
+    result = json.loads(proc.stdout)
+    assert result["status"] == "error"
+    assert "inside the vault" in result["error"]
+    assert _hash_tree(vault) == before_vault
+

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ from typing import Any
 from .context import build_context
 from .filtering import assess_filter
 from .jev_provider import JevError, evaluate_jev
-from .pilot import _safe_paths
+from .pilot import _is_within, _safe_paths
 from .schemas import ContextBundle, SourceRecord
 from .stage_cache import StageCache
 from .storage import SourceStore
@@ -34,6 +35,58 @@ def compute_context_hash(bundle: ContextBundle) -> str:
     }
     encoded = json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def compute_input_hash(source_id: str, content_hash: str) -> str:
+    """Compute a deterministic hash combining source identity and content hash."""
+    payload = {"source_id": source_id, "content_hash": content_hash}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def compute_policy_version_key(
+    question_version: str,
+    policy_version: str,
+    usefulness_threshold: float,
+    context_threshold: float,
+) -> str:
+    """Compute a deterministic key combining question version, policy version, and thresholds."""
+    payload = {
+        "question_version": question_version,
+        "policy_version": policy_version,
+        "usefulness_threshold": round(float(usefulness_threshold), 4),
+        "context_threshold": round(float(context_threshold), 4),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _clean_token(val: str) -> str:
+    """Sanitize identifiers for safe filenames."""
+    return "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in val)
+
+
+def _validate_safe_artifact_target(target_path: Path, vault_path: Path) -> None:
+    """Ensure that the artifact target path does not resolve inside the vault or traverse symlinks into it."""
+    vault_entry = Path(os.path.abspath(vault_path))
+    resolved_vault = vault_path.resolve(strict=True)
+
+    check_node: Path | None = target_path
+    while check_node is not None and check_node != check_node.parent:
+        if check_node.is_symlink():
+            link_target = Path(os.path.abspath(check_node.resolve(strict=False)))
+            if _is_within(link_target, vault_entry) or _is_within(link_target, resolved_vault):
+                raise ValueError(
+                    f"Artifact path '{target_path}' traverses a symlink pointing inside the vault: '{link_target}'"
+                )
+        check_node = check_node.parent
+
+    resolved_target = target_path.resolve(strict=False)
+    target_entry = Path(os.path.abspath(resolved_target))
+    if _is_within(target_entry, vault_entry) or _is_within(resolved_target, resolved_vault):
+        raise ValueError(
+            f"Artifact destination '{target_path}' resolves inside the vault: '{resolved_target}'"
+        )
 
 
 def _sanitize_usage(usage: Any) -> dict[str, int]:
@@ -84,6 +137,10 @@ def evaluate_live_source(
 
     vault_path, workspace_path = _safe_paths(Path(vault), Path(workspace))
 
+    # Validate that workspace artifacts directory does not point into the vault
+    artifact_dir = workspace_path / "artifacts"
+    _validate_safe_artifact_target(artifact_dir, vault_path)
+
     with SourceStore(workspace_path) as store:
         if content_hash is not None:
             record = store.get(source_id, content_hash)
@@ -110,16 +167,27 @@ def evaluate_live_source(
 
     source_hash = record.content_hash
     context_hash = compute_context_hash(bundle)
-    cache_key = StageCache.key("filter", source_hash, context_hash, model, question_version, schema_version=1)
 
-    artifact_dir = workspace_path / "artifacts"
-    artifact_filename = f"filter_{record.source_id.replace(':', '_')}_{source_hash[:16]}.json"
-    artifact_rel_ref = f"artifacts/{artifact_filename}"
+    input_hash = compute_input_hash(record.source_id, source_hash)
+    policy_key = compute_policy_version_key(
+        question_version, policy_version, usefulness_threshold, context_threshold
+    )
+    cache_key = StageCache.key("filter", input_hash, context_hash, model, policy_key, schema_version=1)
 
     with StageCache(workspace_path) as cache:
         if not refresh:
             cached = cache.get(cache_key)
-            if cached is not None:
+            if (
+                cached is not None
+                and cached.get("source_id") == record.source_id
+                and cached.get("source_hash") == source_hash
+                and cached.get("context_hash") == context_hash
+                and cached.get("model") == model
+                and cached.get("question_version") == question_version
+                and cached.get("policy_version") == policy_version
+                and cached.get("usefulness_threshold") == usefulness_threshold
+                and cached.get("context_threshold") == context_threshold
+            ):
                 assessment_data = cached.get("assessment", {})
                 return {
                     "status": "completed",
@@ -138,7 +206,7 @@ def evaluate_live_source(
                     "policy_version": cached.get("policy_version", policy_version),
                     "usage": cached.get("usage", {}),
                     "cached": True,
-                    "artifact_ref": cached.get("raw_response_ref") or artifact_rel_ref,
+                    "artifact_ref": cached.get("raw_response_ref"),
                 }
 
         raw_response = evaluate_jev(
@@ -154,6 +222,30 @@ def evaluate_live_source(
             "context_sufficient": raw_response["answers"]["context_sufficient"],
             "topic": raw_response["answers"]["topic"],
         }
+
+        # Construct immutable artifact filename incorporating source_id, hashes, model, and policy
+        source_id_clean = _clean_token(record.source_id)
+        model_clean = _clean_token(model)
+        policy_clean = _clean_token(policy_version)
+        base_filename = (
+            f"filter_{source_id_clean}_{source_hash[:10]}_{context_hash[:10]}_{model_clean}_{policy_clean}"
+        )
+        artifact_filename = f"{base_filename}.json"
+        artifact_path = artifact_dir / artifact_filename
+
+        if artifact_path.exists() or artifact_path.is_symlink():
+            counter = 1
+            while True:
+                candidate = f"{base_filename}_rev{counter}.json"
+                cand_path = artifact_dir / candidate
+                if not cand_path.exists() and not cand_path.is_symlink():
+                    artifact_filename = candidate
+                    artifact_path = cand_path
+                    break
+                counter += 1
+
+        _validate_safe_artifact_target(artifact_path, vault_path)
+        artifact_rel_ref = f"artifacts/{artifact_filename}"
 
         assessment = assess_filter(
             bundle,
@@ -172,13 +264,15 @@ def evaluate_live_source(
             "model": model,
             "question_version": question_version,
             "policy_version": policy_version,
+            "usefulness_threshold": usefulness_threshold,
+            "context_threshold": context_threshold,
             "answers": sanitized_answers,
             "assessment": assessment.model_dump(mode="json"),
             "usage": sanitized_usage,
             "raw_response_ref": artifact_rel_ref,
         }
 
-        _write_json(artifact_dir / artifact_filename, artifact_data)
+        _write_json(artifact_path, artifact_data)
         cache.put(cache_key, artifact_data)
 
         return {
