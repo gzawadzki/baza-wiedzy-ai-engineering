@@ -16,7 +16,7 @@ from .live_jev import (
     compute_input_hash,
     compute_policy_version_key,
 )
-from .pilot import _safe_paths
+from .pilot import _is_within, _safe_paths
 from .schemas import Claim, ClaimType, ContextBundle, ContextStatus, Evidence, SourceRecord
 from .stage_cache import StageCache
 from .storage import SourceStore
@@ -255,12 +255,17 @@ def extract_claim_proposals(record: SourceRecord, bundle: ContextBundle) -> list
 
 
 def _verify_exact_quote_and_offsets(
+    source_id: str,
     source_text: str,
     content_hash: str,
     claim: Claim,
 ) -> None:
     """Deterministic exact substring/offset check against the pinned revision text."""
     for ev in claim.evidence:
+        if ev.source_id != source_id:
+            raise ValueError(
+                f"Evidence source_id '{ev.source_id}' does not match pinned source '{source_id}'"
+            )
         if ev.content_hash != content_hash:
             raise ValueError(
                 f"Evidence content_hash '{ev.content_hash}' does not match pinned revision '{content_hash}'"
@@ -478,8 +483,25 @@ def extract_live_claims(
             if not json_ref or not md_ref:
                 raise ValueError("Cached extraction missing proposal file references")
 
-            cached_json_path = workspace_path / json_ref
-            cached_md_path = workspace_path / md_ref
+            expected_json_ref = f"proposals/claim_proposals_{extract_cache_key}.json"
+            expected_md_ref = f"proposals/claim_proposals_{extract_cache_key}.md"
+
+            if json_ref != expected_json_ref:
+                raise ValueError(
+                    f"Untrusted proposal JSON ref in cache: expected '{expected_json_ref}', got '{json_ref}'"
+                )
+            if md_ref != expected_md_ref:
+                raise ValueError(
+                    f"Untrusted proposal Markdown ref in cache: expected '{expected_md_ref}', got '{md_ref}'"
+                )
+
+            cached_json_path = (workspace_path / json_ref).resolve()
+            cached_md_path = (workspace_path / md_ref).resolve()
+
+            if not _is_within(cached_json_path, workspace_path.resolve()):
+                raise ValueError(f"Proposal JSON path escapes workspace: '{cached_json_path}'")
+            if not _is_within(cached_md_path, workspace_path.resolve()):
+                raise ValueError(f"Proposal Markdown path escapes workspace: '{cached_md_path}'")
 
             _validate_safe_artifact_target(cached_json_path, vault_path)
             _validate_safe_artifact_target(cached_md_path, vault_path)
@@ -503,7 +525,7 @@ def extract_live_claims(
                     claim_obj = Claim.model_validate(raw_claim)
                 except Exception as exc:
                     raise ValueError(f"Tampered cached claim structure: {exc}") from exc
-                _verify_exact_quote_and_offsets(record.text, source_hash, claim_obj)
+                _verify_exact_quote_and_offsets(record.source_id, record.text, source_hash, claim_obj)
 
             # Revalidate proposal JSON artifact on disk
             try:
@@ -511,18 +533,30 @@ def extract_live_claims(
             except Exception as exc:
                 raise ValueError(f"Cached proposal JSON artifact is invalid: {exc}") from exc
 
-            disk_claims_raw = disk_proposal.get("claims")
-            if not isinstance(disk_claims_raw, list):
-                raise ValueError("Proposal JSON artifact claims payload must be a list")
-            if len(disk_claims_raw) != len(cached_claims_raw):
-                raise ValueError("Discrepancy between cached claims and proposal JSON artifact claims count")
+            # Verify all core fields and full claims payload match cache exactly
+            if disk_proposal.get("schema_version") != extract_cached.get("schema_version", 1):
+                raise ValueError("Divergent schema_version between disk proposal and cache")
+            if disk_proposal.get("source_id") != record.source_id:
+                raise ValueError("Divergent source_id between disk proposal and cache")
+            if disk_proposal.get("content_hash") != source_hash:
+                raise ValueError("Divergent content_hash between disk proposal and cache")
+            if disk_proposal.get("context_hash") != context_hash:
+                raise ValueError("Divergent context_hash between disk proposal and cache")
+            if disk_proposal.get("model") != model:
+                raise ValueError("Divergent model between disk proposal and cache")
+            if disk_proposal.get("policy_version") != policy_version:
+                raise ValueError("Divergent policy_version between disk proposal and cache")
+            if disk_proposal.get("claim_count") != extract_cached.get("claim_count", 0):
+                raise ValueError("Divergent claim_count between disk proposal and cache")
+            if disk_proposal.get("claims") != cached_claims_raw:
+                raise ValueError("Divergent claims payload between disk proposal and cache")
 
-            for disk_claim_raw in disk_claims_raw:
+            for disk_claim_raw in disk_proposal.get("claims", []):
                 try:
                     claim_obj = Claim.model_validate(disk_claim_raw)
                 except Exception as exc:
                     raise ValueError(f"Tampered proposal JSON artifact claim structure: {exc}") from exc
-                _verify_exact_quote_and_offsets(record.text, source_hash, claim_obj)
+                _verify_exact_quote_and_offsets(record.source_id, record.text, source_hash, claim_obj)
 
             return {
                 "status": "completed",
@@ -545,7 +579,7 @@ def extract_live_claims(
 
         # 5. Deterministic exact substring and offset check for all claims
         for claim in claims:
-            _verify_exact_quote_and_offsets(record.text, source_hash, claim)
+            _verify_exact_quote_and_offsets(record.source_id, record.text, source_hash, claim)
 
         # 6. Persist proposals outside vault keyed by full extraction cache key
         base_name = f"claim_proposals_{extract_cache_key}"
@@ -561,11 +595,7 @@ def extract_live_claims(
         proposal_json_ref = f"proposals/{json_filename}"
         proposal_md_ref = f"proposals/{md_filename}"
 
-        if not md_path.exists():
-            rendered_md = _render_human_readable_proposal(record, bundle, claims)
-            md_path.parent.mkdir(parents=True, exist_ok=True)
-            md_path.write_bytes(rendered_md.encode("utf-8"))
-
+        rendered_md = _render_human_readable_proposal(record, bundle, claims)
         serialized_claims = [claim.model_dump(mode="json") for claim in claims]
 
         machine_proposal = {
@@ -591,7 +621,35 @@ def extract_live_claims(
             "staging": True,
             "disclaimer": "UNVERIFIED / UNPUBLISHED — STAGING ONLY",
         }
-        if not json_path.exists():
+
+        # Check existing destination files when cache was missing: fail closed on divergent content
+        if md_path.exists():
+            try:
+                existing_md = md_path.read_text(encoding="utf-8")
+            except Exception as exc:
+                raise ValueError(
+                    f"Destination proposal markdown '{md_path}' exists but cannot be read: {exc}"
+                ) from exc
+            if existing_md != rendered_md:
+                raise ValueError(
+                    f"Destination proposal markdown '{md_path}' already exists with divergent content"
+                )
+        else:
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_bytes(rendered_md.encode("utf-8"))
+
+        if json_path.exists():
+            try:
+                existing_json = json.loads(json_path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                raise ValueError(
+                    f"Destination proposal JSON '{json_path}' exists but contains invalid JSON: {exc}"
+                ) from exc
+            if existing_json != machine_proposal:
+                raise ValueError(
+                    f"Destination proposal JSON '{json_path}' already exists with divergent content"
+                )
+        else:
             _write_json(json_path, machine_proposal)
 
         cache.put(extract_cache_key, machine_proposal)

@@ -432,7 +432,26 @@ def test_exact_substring_and_offset_verification_rules():
             )
         ],
     )
-    _verify_exact_quote_and_offsets(source_text, chash, valid_claim)
+    _verify_exact_quote_and_offsets("x:100", source_text, chash, valid_claim)
+
+    # Source ID mismatch on evidence
+    source_id_mismatch_claim = Claim(
+        claim_id="claim_source_id_mismatch",
+        source_ids=["x:999"],
+        text=source_text,
+        kind=ClaimType.recommendation,
+        evidence=[
+            Evidence(
+                source_id="x:999",
+                content_hash=chash,
+                quote=source_text,
+                start=0,
+                end=len(source_text),
+            )
+        ],
+    )
+    with pytest.raises(ValueError, match="Evidence source_id 'x:999' does not match pinned source 'x:100'"):
+        _verify_exact_quote_and_offsets("x:100", source_text, chash, source_id_mismatch_claim)
 
     # Offset out of range
     bad_offsets_claim = Claim(
@@ -451,7 +470,7 @@ def test_exact_substring_and_offset_verification_rules():
         ],
     )
     with pytest.raises(ValueError, match="out of range"):
-        _verify_exact_quote_and_offsets(source_text, chash, bad_offsets_claim)
+        _verify_exact_quote_and_offsets("x:100", source_text, chash, bad_offsets_claim)
 
     # Slice mismatch (normalized or modified quote)
     slice_mismatch_claim = Claim(
@@ -470,7 +489,7 @@ def test_exact_substring_and_offset_verification_rules():
         ],
     )
     with pytest.raises(ValueError, match="Exact quote mismatch"):
-        _verify_exact_quote_and_offsets(source_text, chash, slice_mismatch_claim)
+        _verify_exact_quote_and_offsets("x:100", source_text, chash, slice_mismatch_claim)
 
     # Content hash mismatch on evidence
     hash_mismatch_claim = Claim(
@@ -489,7 +508,7 @@ def test_exact_substring_and_offset_verification_rules():
         ],
     )
     with pytest.raises(ValueError, match="does not match pinned revision"):
-        _verify_exact_quote_and_offsets(source_text, chash, hash_mismatch_claim)
+        _verify_exact_quote_and_offsets("x:100", source_text, chash, hash_mismatch_claim)
 
 
 def test_no_reliable_claims_emits_empty_proposals(tmp_path):
@@ -870,7 +889,7 @@ def test_tampered_proposal_json_artifact_rejected_on_replay(tmp_path):
     data["claims"][0]["evidence"][0]["quote"] = "Tampered on disk quote."
     json_path.write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="(Exact quote mismatch|Quote '.*' is not an exact substring)"):
+    with pytest.raises(ValueError, match="(Divergent claims payload|Exact quote mismatch|Quote '.*' is not an exact substring)"):
         extract_live_claims(
             vault=vault,
             workspace=workspace,
@@ -1035,4 +1054,221 @@ def test_differing_model_and_policy_outputs_keyed_separately(tmp_path):
     # Other evaluation proposals remain intact
     assert (workspace / res2["proposal_json_ref"]).is_file()
     assert (workspace / res3["proposal_json_ref"]).is_file()
+
+
+def test_untrusted_cached_proposal_ref_rejected(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:701", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    res = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:701",
+        content_hash=focus.content_hash,
+    )
+    assert res["status"] == "completed"
+
+    # Tamper with proposal_json_ref to point to relative traversal path
+    with StageCache(workspace) as cache:
+        rows = cache.connection.execute("SELECT key, value_json FROM artifacts").fetchall()
+        for k, v in rows:
+            data = json.loads(v)
+            if data.get("proposal_json_ref"):
+                data["proposal_json_ref"] = "../../evil.json"
+                cache.connection.execute(
+                    "UPDATE artifacts SET value_json=? WHERE key=?",
+                    (json.dumps(data), k),
+                )
+        cache.connection.commit()
+
+    with pytest.raises(ValueError, match="Untrusted proposal JSON ref in cache"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:701",
+            content_hash=focus.content_hash,
+        )
+
+    # Tamper with proposal_md_ref to point to absolute path
+    with StageCache(workspace) as cache:
+        rows = cache.connection.execute("SELECT key, value_json FROM artifacts").fetchall()
+        for k, v in rows:
+            data = json.loads(v)
+            if data.get("proposal_md_ref"):
+                data["proposal_json_ref"] = res["proposal_json_ref"]
+                data["proposal_md_ref"] = "/etc/passwd"
+                cache.connection.execute(
+                    "UPDATE artifacts SET value_json=? WHERE key=?",
+                    (json.dumps(data), k),
+                )
+        cache.connection.commit()
+
+    with pytest.raises(ValueError, match="Untrusted proposal Markdown ref in cache"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:701",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_divergent_disk_proposal_contents_vs_cache_rejected(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:702", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    res = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:702",
+        content_hash=focus.content_hash,
+    )
+    assert res["status"] == "completed"
+
+    # Modify scope/kind in disk JSON artifact without changing count or quote
+    json_path = workspace / res["proposal_json_ref"]
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    data["claims"][0]["scope"] = "Divergent scope altered on disk."
+    json_path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Divergent claims payload between disk proposal and cache"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:702",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_destination_proposal_json_exists_with_divergent_content_fails_closed(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:703", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    input_hash = compute_input_hash(focus.source_id, focus.content_hash)
+    context_hash = compute_context_hash(bundle)
+    policy_key = compute_policy_version_key("v1", "v1", 0.7, 0.6)
+    extract_cache_key = StageCache.key(
+        "claim_extract", input_hash, context_hash, "jev-latest", policy_key, schema_version=1
+    )
+
+    dest_dir = workspace / "proposals"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_json = dest_dir / f"claim_proposals_{extract_cache_key}.json"
+    dest_json.write_text(json.dumps({"divergent": "pre-existing content"}), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Destination proposal JSON '.*' already exists with divergent content"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:703",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_destination_proposal_md_exists_with_divergent_content_fails_closed(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:704", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    input_hash = compute_input_hash(focus.source_id, focus.content_hash)
+    context_hash = compute_context_hash(bundle)
+    policy_key = compute_policy_version_key("v1", "v1", 0.7, 0.6)
+    extract_cache_key = StageCache.key(
+        "claim_extract", input_hash, context_hash, "jev-latest", policy_key, schema_version=1
+    )
+
+    dest_dir = workspace / "proposals"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_md = dest_dir / f"claim_proposals_{extract_cache_key}.md"
+    dest_md.write_text("# Divergent markdown already present", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Destination proposal markdown '.*' already exists with divergent content"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:704",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_destination_files_exist_with_identical_content_accepted(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:705", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    # Initial extraction
+    res1 = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:705",
+        content_hash=focus.content_hash,
+    )
+    assert res1["status"] == "completed"
+
+    # Clear claim_extract entries from StageCache to simulate cache missing while files exist
+    with StageCache(workspace) as cache:
+        cache.connection.execute("DELETE FROM artifacts WHERE key LIKE 'claim_extract%'")
+        # StageCache keys are hashed, so let's delete all extraction cache keys:
+        input_hash = compute_input_hash(focus.source_id, focus.content_hash)
+        context_hash = compute_context_hash(bundle)
+        policy_key = compute_policy_version_key("v1", "v1", 0.7, 0.6)
+        extract_cache_key = StageCache.key(
+            "claim_extract", input_hash, context_hash, "jev-latest", policy_key, schema_version=1
+        )
+        cache.connection.execute("DELETE FROM artifacts WHERE key=?", (extract_cache_key,))
+        cache.connection.commit()
+
+    # Re-running with existing identical files succeeds and repopulates cache
+    res2 = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:705",
+        content_hash=focus.content_hash,
+    )
+    assert res2["status"] == "completed"
+    assert res2["cached"] is False
+    assert res2["proposal_json_ref"] == res1["proposal_json_ref"]
+
 
