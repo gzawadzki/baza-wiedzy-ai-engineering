@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +16,7 @@ from .live_jev import (
     compute_input_hash,
     compute_policy_version_key,
 )
-from .pilot import _is_within, _safe_paths
+from .pilot import _safe_paths
 from .schemas import Claim, ClaimType, ContextBundle, ContextStatus, Evidence, SourceRecord
 from .stage_cache import StageCache
 from .storage import SourceStore
@@ -464,27 +462,83 @@ def extract_live_claims(
         extract_cached = cache.get(extract_cache_key)
         if extract_cached is not None:
             if (
-                extract_cached.get("source_id") == record.source_id
-                and extract_cached.get("content_hash") == source_hash
-                and extract_cached.get("context_hash") == context_hash
-                and extract_cached.get("model") == model
-                and extract_cached.get("policy_version") == policy_version
+                extract_cached.get("source_id") != record.source_id
+                or extract_cached.get("content_hash") != source_hash
+                or extract_cached.get("context_hash") != context_hash
+                or extract_cached.get("model") != model
+                or extract_cached.get("policy_version") != policy_version
+                or extract_cached.get("question_version", question_version) != question_version
+                or extract_cached.get("usefulness_threshold", usefulness_threshold) != usefulness_threshold
+                or extract_cached.get("context_threshold", context_threshold) != context_threshold
             ):
-                return {
-                    "status": "completed",
-                    "source_id": record.source_id,
-                    "content_hash": source_hash,
-                    "context_hash": context_hash,
-                    "context_status": bundle.context_status.value,
-                    "missing_ids": bundle.missing_ids,
-                    "claim_count": extract_cached.get("claim_count", 0),
-                    "claims": extract_cached.get("claims", []),
-                    "proposal_json_ref": extract_cached.get("proposal_json_ref"),
-                    "proposal_md_ref": extract_cached.get("proposal_md_ref"),
-                    "cached": True,
-                    "verified": False,
-                    "published": False,
-                }
+                raise ValueError("Cached extraction identity mismatch")
+
+            json_ref = extract_cached.get("proposal_json_ref")
+            md_ref = extract_cached.get("proposal_md_ref")
+            if not json_ref or not md_ref:
+                raise ValueError("Cached extraction missing proposal file references")
+
+            cached_json_path = workspace_path / json_ref
+            cached_md_path = workspace_path / md_ref
+
+            _validate_safe_artifact_target(cached_json_path, vault_path)
+            _validate_safe_artifact_target(cached_md_path, vault_path)
+
+            if not cached_json_path.is_file():
+                raise ValueError(
+                    f"Cached proposal JSON artifact missing: '{cached_json_path}'"
+                )
+            if not cached_md_path.is_file():
+                raise ValueError(
+                    f"Cached proposal Markdown artifact missing: '{cached_md_path}'"
+                )
+
+            cached_claims_raw = extract_cached.get("claims")
+            if not isinstance(cached_claims_raw, list):
+                raise ValueError("Cached extraction claims payload must be a list")
+
+            # Revalidate exact quote offsets against pinned source for all cached claims
+            for raw_claim in cached_claims_raw:
+                try:
+                    claim_obj = Claim.model_validate(raw_claim)
+                except Exception as exc:
+                    raise ValueError(f"Tampered cached claim structure: {exc}") from exc
+                _verify_exact_quote_and_offsets(record.text, source_hash, claim_obj)
+
+            # Revalidate proposal JSON artifact on disk
+            try:
+                disk_proposal = json.loads(cached_json_path.read_text(encoding="utf-8"))
+            except Exception as exc:
+                raise ValueError(f"Cached proposal JSON artifact is invalid: {exc}") from exc
+
+            disk_claims_raw = disk_proposal.get("claims")
+            if not isinstance(disk_claims_raw, list):
+                raise ValueError("Proposal JSON artifact claims payload must be a list")
+            if len(disk_claims_raw) != len(cached_claims_raw):
+                raise ValueError("Discrepancy between cached claims and proposal JSON artifact claims count")
+
+            for disk_claim_raw in disk_claims_raw:
+                try:
+                    claim_obj = Claim.model_validate(disk_claim_raw)
+                except Exception as exc:
+                    raise ValueError(f"Tampered proposal JSON artifact claim structure: {exc}") from exc
+                _verify_exact_quote_and_offsets(record.text, source_hash, claim_obj)
+
+            return {
+                "status": "completed",
+                "source_id": record.source_id,
+                "content_hash": source_hash,
+                "context_hash": context_hash,
+                "context_status": bundle.context_status.value,
+                "missing_ids": bundle.missing_ids,
+                "claim_count": extract_cached.get("claim_count", 0),
+                "claims": cached_claims_raw,
+                "proposal_json_ref": json_ref,
+                "proposal_md_ref": md_ref,
+                "cached": True,
+                "verified": False,
+                "published": False,
+            }
 
         # 4. Conservative deterministic offline claim extraction
         claims = extract_claim_proposals(record, bundle)
@@ -493,9 +547,8 @@ def extract_live_claims(
         for claim in claims:
             _verify_exact_quote_and_offsets(record.text, source_hash, claim)
 
-        # 6. Persist proposals outside vault
-        source_id_clean = _clean_token(record.source_id)
-        base_name = f"claim_proposals_{source_id_clean}_{source_hash[:10]}_{context_hash[:10]}"
+        # 6. Persist proposals outside vault keyed by full extraction cache key
+        base_name = f"claim_proposals_{extract_cache_key}"
         json_filename = f"{base_name}.json"
         md_filename = f"{base_name}.md"
 
@@ -508,21 +561,26 @@ def extract_live_claims(
         proposal_json_ref = f"proposals/{json_filename}"
         proposal_md_ref = f"proposals/{md_filename}"
 
-        rendered_md = _render_human_readable_proposal(record, bundle, claims)
-        md_path.parent.mkdir(parents=True, exist_ok=True)
-        md_path.write_bytes(rendered_md.encode("utf-8"))
+        if not md_path.exists():
+            rendered_md = _render_human_readable_proposal(record, bundle, claims)
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_bytes(rendered_md.encode("utf-8"))
 
         serialized_claims = [claim.model_dump(mode="json") for claim in claims]
 
         machine_proposal = {
             "schema_version": 1,
+            "cache_key": extract_cache_key,
             "source_id": record.source_id,
             "content_hash": source_hash,
             "context_hash": context_hash,
             "context_status": bundle.context_status.value,
             "missing_ids": bundle.missing_ids,
             "model": model,
+            "question_version": question_version,
             "policy_version": policy_version,
+            "usefulness_threshold": usefulness_threshold,
+            "context_threshold": context_threshold,
             "status": "completed",
             "claim_count": len(claims),
             "claims": serialized_claims,
@@ -533,7 +591,8 @@ def extract_live_claims(
             "staging": True,
             "disclaimer": "UNVERIFIED / UNPUBLISHED — STAGING ONLY",
         }
-        _write_json(json_path, machine_proposal)
+        if not json_path.exists():
+            _write_json(json_path, machine_proposal)
 
         cache.put(extract_cache_key, machine_proposal)
 
@@ -552,7 +611,3 @@ def extract_live_claims(
             "verified": False,
             "published": False,
         }
-
-
-# Alias for caller flexibility
-extract_claims = extract_live_claims

@@ -796,3 +796,243 @@ def test_cli_claim_extract_failure_exits_code_one(tmp_path):
     output = json.loads(proc.stdout)
     assert output["status"] == "error"
     assert "not found in store" in output["error"]
+
+
+def test_tampered_cached_quote_rejected_on_replay(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:601", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    res = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:601",
+        content_hash=focus.content_hash,
+    )
+    assert res["status"] == "completed"
+
+    # Tamper with the cached payload in StageCache (alter quote text)
+    with StageCache(workspace) as cache:
+        rows = cache.connection.execute(
+            "SELECT key, value_json FROM artifacts"
+        ).fetchall()
+        for k, v in rows:
+            data = json.loads(v)
+            if data.get("claims"):
+                data["claims"][0]["evidence"][0]["quote"] = "Tampered quote not in source text."
+                cache.connection.execute(
+                    "UPDATE artifacts SET value_json=? WHERE key=?",
+                    (json.dumps(data), k),
+                )
+        cache.connection.commit()
+
+    with pytest.raises(ValueError, match="(Exact quote mismatch|Quote '.*' is not an exact substring)"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:601",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_tampered_proposal_json_artifact_rejected_on_replay(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:602", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    res = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:602",
+        content_hash=focus.content_hash,
+    )
+    assert res["status"] == "completed"
+
+    # Tamper with the JSON artifact on disk
+    json_path = workspace / res["proposal_json_ref"]
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    data["claims"][0]["evidence"][0]["quote"] = "Tampered on disk quote."
+    json_path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="(Exact quote mismatch|Quote '.*' is not an exact substring)"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:602",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_missing_proposal_json_artifact_rejected_on_replay(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:603", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    res = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:603",
+        content_hash=focus.content_hash,
+    )
+    assert res["status"] == "completed"
+
+    # Delete JSON artifact
+    json_path = workspace / res["proposal_json_ref"]
+    json_path.unlink()
+
+    with pytest.raises(ValueError, match="Cached proposal JSON artifact missing"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:603",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_missing_proposal_md_artifact_rejected_on_replay(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:604", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    seed_filter_assessment(workspace, focus, bundle, decision="extract")
+
+    res = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:604",
+        content_hash=focus.content_hash,
+    )
+    assert res["status"] == "completed"
+
+    # Delete Markdown artifact
+    md_path = workspace / res["proposal_md_ref"]
+    md_path.unlink()
+
+    with pytest.raises(ValueError, match="Cached proposal Markdown artifact missing"):
+        extract_live_claims(
+            vault=vault,
+            workspace=workspace,
+            source_id="x:604",
+            content_hash=focus.content_hash,
+        )
+
+
+def test_differing_model_and_policy_outputs_keyed_separately(tmp_path):
+    vault = make_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+
+    text = "Prune stale tool output before it consumes the context budget."
+    focus = make_source("x:605", text=text)
+
+    with SourceStore(workspace) as store:
+        insert_source(store, focus)
+        bundle = build_context(focus, store.get_deterministic)
+
+    # Seed 3 different evaluations: default, custom model, custom policy
+    seed_filter_assessment(workspace, focus, bundle, decision="extract", model="jev-latest", policy_version="v1")
+    seed_filter_assessment(workspace, focus, bundle, decision="extract", model="custom-model", policy_version="v1")
+    seed_filter_assessment(workspace, focus, bundle, decision="extract", model="jev-latest", policy_version="v2")
+
+    res1 = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:605",
+        content_hash=focus.content_hash,
+        model="jev-latest",
+        policy_version="v1",
+    )
+    res2 = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:605",
+        content_hash=focus.content_hash,
+        model="custom-model",
+        policy_version="v1",
+    )
+    res3 = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:605",
+        content_hash=focus.content_hash,
+        model="jev-latest",
+        policy_version="v2",
+    )
+
+    # Distinct artifact references
+    refs = {res1["proposal_json_ref"], res2["proposal_json_ref"], res3["proposal_json_ref"]}
+    assert len(refs) == 3
+
+    md_refs = {res1["proposal_md_ref"], res2["proposal_md_ref"], res3["proposal_md_ref"]}
+    assert len(md_refs) == 3
+
+    # All artifacts exist simultaneously on disk without overwriting each other
+    for r in refs:
+        assert (workspace / r).is_file()
+    for mr in md_refs:
+        assert (workspace / mr).is_file()
+
+    # Verify content of each proposal corresponds to its specific evaluation
+    p1 = json.loads((workspace / res1["proposal_json_ref"]).read_text(encoding="utf-8"))
+    p2 = json.loads((workspace / res2["proposal_json_ref"]).read_text(encoding="utf-8"))
+    p3 = json.loads((workspace / res3["proposal_json_ref"]).read_text(encoding="utf-8"))
+
+    assert p1["model"] == "jev-latest" and p1["policy_version"] == "v1"
+    assert p2["model"] == "custom-model" and p2["policy_version"] == "v1"
+    assert p3["model"] == "jev-latest" and p3["policy_version"] == "v2"
+
+    # Capture mtimes of res1 files
+    res1_json_stat_before = (workspace / res1["proposal_json_ref"]).stat()
+    res1_md_stat_before = (workspace / res1["proposal_md_ref"]).stat()
+
+    # Replay res1
+    replay1 = extract_live_claims(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:605",
+        content_hash=focus.content_hash,
+        model="jev-latest",
+        policy_version="v1",
+    )
+    assert replay1["cached"] is True
+    assert replay1["proposal_json_ref"] == res1["proposal_json_ref"]
+
+    # Ensure files were not overwritten on rerun
+    res1_json_stat_after = (workspace / res1["proposal_json_ref"]).stat()
+    res1_md_stat_after = (workspace / res1["proposal_md_ref"]).stat()
+    assert res1_json_stat_before.st_mtime_ns == res1_json_stat_after.st_mtime_ns
+    assert res1_md_stat_before.st_mtime_ns == res1_md_stat_after.st_mtime_ns
+
+    # Other evaluation proposals remain intact
+    assert (workspace / res2["proposal_json_ref"]).is_file()
+    assert (workspace / res3["proposal_json_ref"]).is_file()
+
