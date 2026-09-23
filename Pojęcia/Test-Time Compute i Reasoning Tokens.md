@@ -3,8 +3,8 @@ typ: pojęcie
 aliases: [Reasoning Tokens, Test-Time Compute, Koszt rozumowania, Overthinking]
 tagi: [modele, reasoning, koszty, latencja]
 źródła:
-  - "[[simonw — Baza Wskazówek i Komentarzy]]"
-  - "[[karminski3 — Baza Wskazówek i Komentarzy]]"
+  - "[[simonw — Indeks]]"
+  - "[[karminski3 — Indeks]]"
 ---
 
 # Test-Time Compute i Reasoning Tokens

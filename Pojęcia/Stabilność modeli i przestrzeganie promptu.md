@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [System Prompt Adherence, Model Stability, Benchmark Skepticism]
 tagi: [modele, prompt-engineering, ewaluacja, stabilnosc]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Stabilność modeli i przestrzeganie promptu
@@ -28,4 +28,4 @@ W inżynierii agentowej wybór modelu fundamentowego (LLM) zależy w mniejszym s
 - [[Harness]]
 - [[Prompt Architecture]]
 - [[Rework Rate]]
-- [[Kun Chen — Baza Wskazówek i Komentarzy]]
+- [[kunchenguid — Indeks]]

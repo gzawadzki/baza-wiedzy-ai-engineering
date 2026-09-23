@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Safe Compaction Point, Safe Checkpoint, Granica zadania]
 tagi: [agenci, kontekst, harness, bezpieczenstwo]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Bezpieczny punkt kompaktowania
@@ -25,7 +25,6 @@ Zamiast ciąć kontekst natychmiast po osiągnięciu progu tokenów, harness age
 ## Powiązane
 
 - [[Context Compaction]]
-- [[Checkpointing sesji agenta]]
 - [[Persistencja stanu agenta]]
 - [[Jev]]
 - [[Harness]]

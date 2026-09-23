@@ -3,8 +3,8 @@ typ: pojęcie
 aliases: [KV Cache Optimization, Latent Reasoning, Multi-Token Prediction, Architektura pamięci uwagi]
 tagi: [architektura, modele, kv-cache, kontekst, attention]
 źródła:
-  - "[[teortaxesTex — Baza Wskazówek i Komentarzy]]"
-  - "[[karminski3 — Baza Wskazówek i Komentarzy]]"
+  - "[[teortaxesTex — Indeks]]"
+  - "[[karminski3 — Indeks]]"
 ---
 
 # Architektura KV Cache i Rozumowanie Latentne

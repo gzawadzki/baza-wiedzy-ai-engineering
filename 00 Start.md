@@ -38,16 +38,16 @@ Vault gromadzi trwałą wiedzę o projektowaniu systemów AI. Notatki powinny by
 - [[Kaskady Modeli i Routing Pewności]]
 - [[Weryfikator]]
 
-### Źródła
+### Źródła i Praktycy
 
+- [[kunchenguid — Indeks|Kun Chen (@kunchenguid)]]
+- [[karminski3 — Indeks|Karminski (@karminski3)]]
+- [[simonw — Indeks|Simon Willison (@simonw)]]
+- [[HamelHusain — Indeks|Hamel Husain (@HamelHusain)]]
+- [[teortaxesTex — Indeks|Teor Taxes (@teortaxesTex)]]
+- [[DrJimFan — Indeks|Dr. Jim Fan (@DrJimFan)]]
+- [[JustinLin610 — Indeks|Junyang Lin — Qwen (@JustinLin610)]]
 - [[TypeSafe i Jev — wywiad z Diogo Almeidą]]
-- [[Kun Chen — Baza Wskazówek i Komentarzy]]
-- [[HamelHusain — Baza Wskazówek i Komentarzy]]
-- [[simonw — Baza Wskazówek i Komentarzy]]
-- [[karminski3 — Baza Wskazówek i Komentarzy]]
-- [[teortaxesTex — Baza Wskazówek i Komentarzy]]
-- [[DrJimFan — Baza Wskazówek i Komentarzy]]
-- [[JustinLin610 — Baza Wskazówek i Komentarzy]]
 - [[Rekomendowani praktycy AI Engineering]]
 
 ## Reguła kwalifikacji

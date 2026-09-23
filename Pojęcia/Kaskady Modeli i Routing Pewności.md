@@ -3,9 +3,9 @@ typ: pojęcie
 aliases: [Kaskada modeli, Model Tiering, Routing probabilistyczny, Escalation Policy]
 tagi: [architektura, routing, koszty, modele, ewaluacja]
 źródła:
-  - "[[HamelHusain — Baza Wskazówek i Komentarzy]]"
-  - "[[JustinLin610 — Baza Wskazówek i Komentarzy]]"
-  - "[[karminski3 — Baza Wskazówek i Komentarzy]]"
+  - "[[HamelHusain — Indeks]]"
+  - "[[JustinLin610 — Indeks]]"
+  - "[[karminski3 — Indeks]]"
 ---
 
 # Kaskady Modeli i Routing Pewności

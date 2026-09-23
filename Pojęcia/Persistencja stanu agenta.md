@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [State Persistence, Trwały stan sesji, Pamięć agenta]
 tagi: [agenci, stan, architektura, harness]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Persistencja stanu agenta

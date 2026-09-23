@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Wskaźnik przeróbek, Koszt poprawek, Outcome Evaluation]
 tagi: [ewaluacja, agenci, jakosc, metryki]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Rework Rate

@@ -7,12 +7,14 @@ a następnie LLM do destylacji wiedzy i zapisu w formacie Markdown dla Obsidiana
 
 import os
 import sys
+import re
 import json
+import logging
 import argparse
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -21,6 +23,52 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+# Inicjalizacja trwałego logowania operacji
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+LOGS_DIR = PROJECT_ROOT / "logs"
+STATE_LOGS_DIR = PROJECT_ROOT / "state" / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+STATE_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+FETCH_LOG_FILE = LOGS_DIR / "fetch.log"
+FETCH_JSONL_FILE = LOGS_DIR / "fetch.jsonl"
+STATE_FETCH_LOG_FILE = STATE_LOGS_DIR / "fetch.log"
+STATE_FETCH_JSONL_FILE = STATE_LOGS_DIR / "fetch.jsonl"
+
+logger = logging.getLogger("extractor")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    _log_format = logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    _ch = logging.StreamHandler(sys.stdout)
+    _ch.setFormatter(_log_format)
+    logger.addHandler(_ch)
+
+    _fh1 = logging.FileHandler(FETCH_LOG_FILE, encoding="utf-8")
+    _fh1.setFormatter(_log_format)
+    logger.addHandler(_fh1)
+
+    _fh2 = logging.FileHandler(STATE_FETCH_LOG_FILE, encoding="utf-8")
+    _fh2.setFormatter(_log_format)
+    logger.addHandler(_fh2)
+
+
+def log_event(event_type: str, data: Dict[str, Any]):
+    """Zapisuje ustrukturyzowany rekord audytowy w formacie JSONL."""
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event_type,
+        **data,
+    }
+    line = json.dumps(record, ensure_ascii=False) + "\n"
+    try:
+        with open(FETCH_JSONL_FILE, "a", encoding="utf-8") as f:
+            f.write(line)
+        with open(STATE_FETCH_JSONL_FILE, "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception as exc:
+        logger.warning(f"Błąd zapisu JSONL logu: {exc}")
+
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, field_validator
@@ -118,7 +166,7 @@ class ExtractedTip(BaseModel):
 def fetch_tweets_from_apify(
     handle: str, max_items: int = 80, until_date: Optional[str] = None, since_date: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """Pobiera tweety i komentarze danego użytkownika przez Apify."""
+    """Pobiera tweety i komentarze danego użytkownika przez Apify z trwałym logowaniem audytowym."""
     if not APIFY_API_TOKEN:
         raise ValueError(
             "Brak APIFY_API_TOKEN. Ustaw go w pliku .env lub zmiennych środowiskowych."
@@ -132,10 +180,16 @@ def fetch_tweets_from_apify(
     if until_date:
         query += f" until:{until_date}"
 
-    print(f"[*] Łączenie z Apify w celu pobrania wpisów @{handle} (query: '{query}', limit: {max_items})...")
-    client = ApifyClient(APIFY_API_TOKEN)
+    logger.info(f"Łączenie z Apify (@{handle}) | query='{query}' | limit={max_items}")
+    log_event("apify_fetch_started", {
+        "handle": handle,
+        "query": query,
+        "limit": max_items,
+        "since": since_date,
+        "until": until_date,
+    })
 
-    # Używamy aktora kompatybilnego w 100% z Apify Free Plan
+    client = ApifyClient(APIFY_API_TOKEN)
     actor_id = "scrape.badger/twitter-tweets-scraper"
     run_input = {
         "mode": "Advanced Search",
@@ -144,10 +198,14 @@ def fetch_tweets_from_apify(
         "max_results": max_items,
     }
 
-    print(f"[*] Uruchamianie aktora {actor_id}...")
-    run = client.actor(actor_id).call(run_input=run_input)
+    t0 = datetime.now()
+    try:
+        run = client.actor(actor_id).call(run_input=run_input)
+    except Exception as exc:
+        logger.error(f"Błąd uruchomienia aktora {actor_id}: {exc}")
+        log_event("apify_fetch_error", {"handle": handle, "query": query, "error": str(exc)})
+        raise
 
-    # Bezpieczne pobranie dataset_id z obiektu Run lub słownika
     dataset_id = getattr(run, "default_dataset_id", None)
     if not dataset_id and isinstance(run, dict):
         dataset_id = run.get("defaultDatasetId")
@@ -155,10 +213,18 @@ def fetch_tweets_from_apify(
     if not dataset_id:
         raise RuntimeError("Nie udało się uzyskać identyfikatora datasetu z Apify.")
 
-    print(f"[*] Pobieranie wyników z datasetu ({dataset_id})...")
     dataset_items = list(client.dataset(dataset_id).iterate_items())
+    dur = (datetime.now() - t0).total_seconds()
 
-    print(f"[+] Pobrano {len(dataset_items)} surowych rekordów.")
+    logger.info(f"Pobrano {len(dataset_items)} surowych rekordów dla @{handle} w {dur:.2f}s (dataset: {dataset_id})")
+    log_event("apify_fetch_completed", {
+        "handle": handle,
+        "query": query,
+        "dataset_id": dataset_id,
+        "items_count": len(dataset_items),
+        "duration_seconds": round(dur, 2),
+    })
+
     return dataset_items
 
 
@@ -278,6 +344,9 @@ def evaluate_with_jev(tweets: List[Dict[str, Any]], min_score: float = 1.35) -> 
                     "agent_orchestration": "Multi-agent systems, Firstmate, leaf node agents, task routing, coordination tradeoffs.",
                     "prompt_and_models": "Prompt architecture, system prompt adherence, model spikiness vs stability, evaluation metrics.",
                     "verification_and_harness": "Harness engineering, code review rules, step-by-step verification, test bypass prevention.",
+                    "evals_and_debugging": "LLM evaluation methodology, real vs synthetic eval sets, error analysis, LLM-as-a-judge failure modes, fine-tuning evals.",
+                    "security_and_tools": "Prompt injection, security boundaries, sandboxing, tool calling, CLI harness, agent tooling.",
+                    "embodied_and_models": "Embodied AI, world models, multimodal models, reasoning capabilities, training paradigms.",
                     "none_of_these": "Not technical, trivial social comment, off-topic, or lacks substantive AI engineering substance."
                 }
             }
@@ -384,6 +453,8 @@ Zwróć odpowiedź w formacie JSON zgodnym ze schematem."""
                 '  "context_summary": "Kontekst / jaki problem rozwiązuje",\n'
                 '  "tip": "Główna rada / reguła inżynierska po polsku",\n'
                 '  "pitfall": "Anty-wzorzec lub pułapka (opcjonalnie)",\n'
+                '  "has_conflict": true/false,\n'
+                '  "conflict_notes": "Zwięzły opis kwestii spornej / sprzeczności (jeśli dotyczy)",\n'
                 '  "vault_links": ["[[Pojęcie]]"],\n'
                 '  "original_quote": "Oryginalny cytat po angielsku"\n'
                 '}',
@@ -399,93 +470,160 @@ Zwróć odpowiedź w formacie JSON zgodnym ze schematem."""
         return None
 
 
+def slugify_title(title: str) -> str:
+    """Tworzy bezpieczną nazwę pliku z tytułu porady."""
+    # Usuwamy niedozwolone znaki dla systemów plików i Obsidiana (: / \ ? * < > | " # ^ [ ])
+    clean = re.sub(r'[\/:*?"<>|#^\[\]]', '', title)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    return clean[:80] if len(clean) > 80 else clean
+
+
+def collect_all_notes(notes_dir: Path) -> List[Dict[str, Any]]:
+    """Odczytuje wszystkie istniejące notatki atomowe z folderu, aby zachować spójność indeksu."""
+    all_notes = []
+    for p in sorted(notes_dir.glob("*.md")):
+        text = p.read_text(encoding="utf-8")
+        m_title = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
+        m_cat = re.search(r"kategoria:\s*\"?([^\n\"]+)\"?", text)
+        m_url = re.search(r"źródło:\s*\"?([^\n\"]+)\"?", text)
+        m_conf = re.search(r"## ⚡ Kwestia sporna / do rozstrzygnięcia\s*\n+([^\n#]+)", text)
+        m_links = re.search(r"- \*\*Kluczowe pojęcia:\*\*\s*(.+)$", text, re.MULTILINE)
+
+        title = m_title.group(1).strip() if m_title else p.stem
+        cat = m_cat.group(1).strip() if m_cat else "Inne obserwacje"
+        url = m_url.group(1).strip() if m_url else ""
+        conf = m_conf.group(1).strip() if m_conf else None
+        links_str = f" ({m_links.group(1).strip()})" if m_links else ""
+
+        all_notes.append({
+            "note_stem": p.stem,
+            "title": title,
+            "category": cat,
+            "url": url,
+            "conflict": conf,
+            "links_str": links_str,
+        })
+    return all_notes
+
+
 def generate_obsidian_markdown(
     results: List[Dict[str, Any]], output_path: Path, handle: str
 ):
-    """Generuje plik Markdown gotowy do otwarcia w Obsidianie."""
+    """Generuje strukturę Zettelkasten: atomowe notatki per wpis oraz aktualizuje główny indeks autora."""
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    # Grupowanie według kategorii
+    # Tworzymy folder autora w Źródła/<handle>/ oraz podfolder Wpisy/
+    author_dir = output_path.parent / handle
+    notes_dir = author_dir / "Wpisy"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Generujemy poszczególne atomowe notatki
+    for item in results:
+        t: ExtractedTip = item["tip_obj"]
+        raw = item["tweet"]
+
+        title = t.title or "Wskazówka inżynierska"
+        slug = slugify_title(title)
+        
+        # Formatowanie daty do prefiksu (np. 2026-09-20)
+        date_str = str(raw.get("date", ""))
+        date_prefix = ""
+        try:
+            parsed_date = datetime.strptime(date_str, "%a %b %d %H:%M:%S %z %Y")
+            date_prefix = parsed_date.strftime("%Y-%m-%d ")
+        except Exception:
+            if len(date_str) >= 10 and date_str[:4].isdigit():
+                date_prefix = date_str[:10] + " "
+
+        filename = f"{date_prefix}{slug}.md"
+        file_path = notes_dir / filename
+
+        note_lines = []
+        note_lines.append("---")
+        note_lines.append(f"typ: wpis-źródłowy")
+        note_lines.append(f"autor: \"@{handle}\"")
+        note_lines.append(f"data: \"{raw['date']}\"")
+        note_lines.append(f"źródło: \"{raw['url']}\"")
+        note_lines.append(f"kategoria: \"{t.category or 'Inżynieria AI'}\"")
+        note_lines.append("tagi:")
+        note_lines.append(f"  - {handle.lower()}")
+        note_lines.append("  - ai-engineering")
+        note_lines.append("  - wpis-atomowy")
+        note_lines.append("---\n")
+
+        note_lines.append(f"# {title}\n")
+        note_lines.append(f"- **Autor:** [[{handle} — Indeks|@{handle}]] | **Data:** `{raw['date']}` | **Źródło:** [Post na X]({raw['url']})")
+        if raw["is_reply"]:
+            note_lines.append(f"- **Konwersacja:** Odpowiedź w dyskusji (@{raw['parent_user'] or 'wątek'})")
+        
+        if t.vault_links:
+            note_lines.append(f"- **Kluczowe pojęcia:** {' '.join(t.vault_links)}")
+        
+        note_lines.append("\n---\n")
+
+        if t.context_summary:
+            note_lines.append(f"## Kontekst i problem\n{t.context_summary}\n")
+
+        if t.tip:
+            note_lines.append(f"## Rada inżynierska\n{t.tip}\n")
+
+        if t.pitfall:
+            note_lines.append(f"## Uwaga / Anty-wzorzec\n{t.pitfall}\n")
+
+        if t.has_conflict and t.conflict_notes:
+            note_lines.append(f"## ⚡ Kwestia sporna / do rozstrzygnięcia\n{t.conflict_notes}\n")
+
+        if t.original_quote:
+            note_lines.append(f"## Oryginalny cytat\n> *\"{t.original_quote}\"*\n")
+
+        file_path.write_text("\n".join(note_lines), encoding="utf-8")
+
+    # 2. Generujemy zbiorczy główny indeks autora ze wszystkich notatek w folderze
+    index_file = author_dir / f"{handle} — Indeks.md"
+    all_notes = collect_all_notes(notes_dir)
+    
+    # Grupowanie według kategorii do indeksu
     by_category: Dict[str, List[Dict[str, Any]]] = {}
-    for res in results:
-        tip: ExtractedTip = res["tip_obj"]
-        cat = tip.category or "Inne obserwacje"
-        by_category.setdefault(cat, []).append(res)
+    for item in all_notes:
+        by_category.setdefault(item["category"], []).append(item)
 
-    md = []
-    md.append("---")
-    md.append(f"autor: \"@{handle}\"")
-    md.append(f"źródło: \"https://x.com/{handle}\"")
-    md.append(f"wygenerowano: \"{now_str}\"")
-    md.append("typ: synteza-wiedzy")
-    md.append("tagi:")
-    md.append(f"  - {handle.lower()}")
-    md.append("  - ai-engineering")
-    md.append("  - prompt-engineering")
-    md.append("  - twitter-extract")
-    md.append("---\n")
+    idx_lines = []
+    idx_lines.append("---")
+    idx_lines.append("typ: indeks-autora")
+    idx_lines.append(f"autor: \"@{handle}\"")
+    idx_lines.append(f"źródło: \"https://x.com/{handle}\"")
+    idx_lines.append(f"wygenerowano: \"{now_str}\"")
+    idx_lines.append("tagi:")
+    idx_lines.append(f"  - {handle.lower()}")
+    idx_lines.append("  - ai-engineering")
+    idx_lines.append("  - indeks")
+    idx_lines.append("---\n")
 
-    md.append(f"# @{handle} — Baza Wskazówek i Komentarzy\n")
-    md.append(
-        "> Destylacja praktycznych porad, heurystyk inżynierskich i komentarzy technicznych "
-        f"z profilu @{handle} na platformie X. Wyciągnięto {len(results)} wartościowych wpisów.\n"
+    idx_lines.append(f"# @{handle} — Indeks Bazy Wiedzy\n")
+    idx_lines.append(
+        f"> Baza wiedzy wyekstrahowana z wypowiedzi i dyskusji inżynierskich **@{handle}**. "
+        f"Zawiera **{len(all_notes)}** wyodrębnionych, atomowych notatek inżynierskich.\n"
     )
 
-    # Sekcja sporów i rozbieżności
-    conflicts = [item for item in results if item["tip_obj"].has_conflict]
+    # Sekcja sporów
+    conflicts = [it for it in all_notes if it["conflict"]]
     if conflicts:
-        md.append("## ⚠️ Kwestie sporne i rozbieżności do rozstrzygnięcia\n")
-        md.append("> Wpisy, w których autor podważa powszechne przekonania branżowe lub prezentuje tezy stojące w sprzeczności z innymi praktykami:\n")
-        for item in conflicts:
-            t: ExtractedTip = item["tip_obj"]
-            raw = item["tweet"]
-            md.append(f"- **[{t.title or 'Kwestia sporna'}]({raw['url']}):** {t.conflict_notes or t.tip}")
-        md.append("\n---\n")
+        idx_lines.append("## ⚠️ Kwestie sporne i rozbieżności do rozstrzygnięcia\n")
+        idx_lines.append("> Tezy podważające powszechne przekonania branżowe lub prezentujące odmienne podejście:\n")
+        for it in conflicts:
+            idx_lines.append(f"- **[[{it['note_stem']}|{it['title']}]]** — {it['conflict']}")
+        idx_lines.append("\n---\n")
 
-    md.append("## Spis kategorii\n")
-    for cat, items in by_category.items():
-        md.append(f"- [{cat}](#{cat.lower().replace(' ', '-').replace('/', '')}) ({len(items)})")
-    md.append("\n---\n")
+    idx_lines.append("## Spis tematów i notatek\n")
+    for cat, items in sorted(by_category.items()):
+        idx_lines.append(f"### {cat} ({len(items)})\n")
+        for it in items:
+            idx_lines.append(f"- [[{it['note_stem']}|{it['title']}]] — [Post na X]({it['url']}){it['links_str']}")
+        idx_lines.append("")
 
-    for cat, items in by_category.items():
-        md.append(f"## {cat}\n")
-        for item in items:
-            t: ExtractedTip = item["tip_obj"]
-            raw = item["tweet"]
-
-            md.append(f"### {t.title or 'Wskazówka'}\n")
-            md.append(f"- **Data:** `{raw['date']}` | **Źródło:** [Post na X]({raw['url']})")
-            if raw["is_reply"]:
-                md.append(f"- **Rodzaj:** Komentarz w dyskusji (@{raw['parent_user'] or 'dyskusja'})")
-            else:
-                md.append("- **Rodzaj:** Wpis autorski")
-
-            if t.vault_links:
-                links_str = " ".join(t.vault_links)
-                md.append(f"- **Powiązane pojęcia:** {links_str}")
-
-            if t.context_summary:
-                md.append(f"\n**Kontekst / Problem:**\n{t.context_summary}\n")
-
-            if t.tip:
-                md.append(f"**Rada inżynierska:**\n{t.tip}\n")
-
-            if t.pitfall:
-                md.append(f"**Uwaga / Anty-wzorzec:**\n{t.pitfall}\n")
-
-            if t.has_conflict and t.conflict_notes:
-                md.append(f"**⚡ Kwestia sporna / do rozstrzygnięcia:**\n{t.conflict_notes}\n")
-
-            if t.original_quote:
-                md.append(f"> **Cytat:** *\"{t.original_quote}\"*\n")
-
-            md.append("---\n")
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(md))
-
-    print(f"[+] Pomyślnie zapisano notatkę w: {output_path}")
+    index_file.write_text("\n".join(idx_lines), encoding="utf-8")
+    print(f"[+] Zapisano {len(results)} nowych notatek atomowych w: {notes_dir}")
+    print(f"[+] Zaktualizowano indeks autora ({len(all_notes)} łącznie) w: {index_file}")
 
 
 def main():
@@ -560,14 +698,37 @@ def main():
         with open(cache_path, "r", encoding="utf-8") as f:
             raw_items = json.load(f)
     else:
+        # Automatyczne wykrycie okna od ostatniego pobrania, jeśli flaga --since nie została jawnie podana
+        if not args.since and cache_path.exists():
+            try:
+                cached_items = json.loads(cache_path.read_text(encoding="utf-8"))
+                latest_dt = None
+                for it in cached_items:
+                    c = it.get("created_at") or it.get("createdAt")
+                    if c:
+                        try:
+                            dt = datetime.strptime(c, "%a %b %d %H:%M:%S %z %Y")
+                        except Exception:
+                            try:
+                                dt = datetime.fromisoformat(c.replace("Z", "+00:00"))
+                            except Exception:
+                                continue
+                        if latest_dt is None or dt > latest_dt:
+                            latest_dt = dt
+                if latest_dt:
+                    args.since = latest_dt.strftime("%Y-%m-%d")
+                    logger.info(f"Okno od ostatniego pobrania (@{args.handle}): since={args.since} (najnowszy wpis: {latest_dt.isoformat()})")
+            except Exception as e:
+                logger.warning(f"Nie udało się odczytać daty ostatniego pobrania: {e}")
+
         raw_items = fetch_tweets_from_apify(args.handle, args.max_tweets, until_date=args.until, since_date=args.since)
-        # Łączymy z istniejącym cache, deduplikując po id
         existing_raw = []
         if cache_path.exists():
             try:
                 existing_raw = json.loads(cache_path.read_text(encoding="utf-8"))
             except Exception:
                 pass
+        before_cnt = len(existing_raw)
         merged_by_id = {}
         for item in existing_raw + raw_items:
             tid = str(item.get("id") or item.get("id_str") or item.get("tweet_id") or "")
@@ -577,13 +738,82 @@ def main():
                 merged_by_id[str(len(merged_by_id))] = item
         
         all_raw_items = list(merged_by_id.values())
+        new_cnt = len(all_raw_items) - before_cnt
         with open(cache_path, "w", encoding="utf-8") as f:
             json.dump(all_raw_items, f, ensure_ascii=False, indent=2)
-        print(f"[+] Zapisano zaktualizowany cache: {cache_path} ({len(all_raw_items)} unikalnych wpisów).")
+        logger.info(f"Zapisano cache: {cache_path} (+{new_cnt} nowych, łącznie: {len(all_raw_items)}).")
+        log_event("cache_saved", {
+            "handle": args.handle,
+            "cache_file": cache_path.name,
+            "before_count": before_cnt,
+            "new_count": new_cnt,
+            "total_count": len(all_raw_items),
+        })
 
         if args.fetch_only:
-            print("[*] Zakończono etap pobierania (--fetch-only).")
+            logger.info("Zakończono etap pobierania (--fetch-only). Zapisano logi.")
             return
+
+    # Filtrowanie daty (--since) w trybie analizy
+    if args.since:
+        filtered_items = []
+        since_val = args.since.strip()
+        for item in raw_items:
+            created = item.get("created_at") or item.get("createdAt")
+            if not created:
+                continue
+            item_dt = None
+            try:
+                item_dt = datetime.strptime(created, "%a %b %d %H:%M:%S %z %Y")
+            except Exception:
+                try:
+                    item_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                except Exception:
+                    pass
+            if item_dt:
+                if len(since_val) == 10 and since_val.count("-") == 2:
+                    if item_dt.strftime("%Y-%m-%d") >= since_val:
+                        filtered_items.append(item)
+                else:
+                    try:
+                        since_dt = datetime.fromisoformat(since_val.replace("Z", "+00:00"))
+                        if not since_dt.tzinfo:
+                            from datetime import timezone
+                            since_dt = since_dt.replace(tzinfo=timezone.utc)
+                        if item_dt >= since_dt:
+                            filtered_items.append(item)
+                    except Exception:
+                        if created >= since_val:
+                            filtered_items.append(item)
+            elif created >= since_val:
+                filtered_items.append(item)
+        print(f"[*] Przefiltrowano wpisy wg --since {args.since}: {len(filtered_items)} / {len(raw_items)}")
+        raw_items = filtered_items
+
+    # Pomijamy wpisy, które już zostały wcześniej wyekstrahowane do notatek
+    notes_dir = (
+        Path(args.output).parent / args.handle / "Wpisy"
+        if args.output
+        else Path(__file__).resolve().parent.parent / "Źródła" / args.handle / "Wpisy"
+    )
+    if notes_dir.exists():
+        existing_urls = set()
+        for p in notes_dir.glob("*.md"):
+            txt = p.read_text(encoding="utf-8")
+            m_url = re.search(r"źródło:\s*\"?([^\n\"]+)\"?", txt)
+            if m_url:
+                existing_urls.add(m_url.group(1).strip())
+        before_cnt = len(raw_items)
+        raw_items = [
+            it for it in raw_items
+            if (it.get("url") or it.get("twitterUrl") or f"https://x.com/{args.handle}/status/{it.get('id') or it.get('id_str')}") not in existing_urls
+        ]
+        if before_cnt != len(raw_items):
+            print(f"[*] Pominięto {before_cnt - len(raw_items)} wpisów już istniejących w bazie. Do analizy: {len(raw_items)}")
+
+    if not raw_items:
+        print("[*] Brak nowych wpisów do analizy. Wszystkie wpisy z tego zakresu są już w bazie wiedzy.")
+        return
 
     # 2. Normalizacja
     normalized_tweets = []

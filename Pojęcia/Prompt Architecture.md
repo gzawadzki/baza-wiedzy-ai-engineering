@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Architektura promptów, Prompt Engineering Patterns]
 tagi: [prompty, architektura, harness, agenci]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Prompt Architecture

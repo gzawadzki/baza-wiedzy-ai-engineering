@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Firstmate, Leaf Node Agent, Hierarchy of Agents]
 tagi: [agenci, architektura, orkiestracja, skalowanie]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Firstmate i Agenci Wykonawczy (Leaf Nodes)

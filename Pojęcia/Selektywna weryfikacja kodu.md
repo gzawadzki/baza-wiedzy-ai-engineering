@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [No-mistakes verification, Selektywna weryfikacja]
 tagi: [weryfikacja, code-review, harness, jakosc]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Selektywna weryfikacja kodu (No-Mistakes)
