@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 
 from .audit import audit, snapshot, verify_snapshot
+from .jev_provider import JevError
+from .live_jev import evaluate_live_source
 from .pilot import run_pilot
 from .storage import SourceStore
 
@@ -32,6 +34,15 @@ def main():
     p.add_argument("--vault", type=Path, required=True)
     p.add_argument("--workspace", type=Path, required=True, help="Operational state outside the vault")
     p.add_argument("--fixture", type=Path, required=True, help="Offline fixture JSON")
+    j = commands.add_parser(
+        "jev-evaluate", help="Evaluate an imported source with TypeSafe Jev filtering"
+    )
+    j.add_argument("--vault", type=Path, required=True)
+    j.add_argument("--workspace", type=Path, required=True, help="Operational state outside the vault")
+    j.add_argument("--source-id", type=str, required=True, help="X source ID (x:<numeric_id>)")
+    j.add_argument("--content-hash", type=str, default=None, help="Content hash for ambiguous revisions")
+    j.add_argument("--refresh", action="store_true", default=False, help="Refresh evaluation instead of using cache")
+    j.add_argument("--model", type=str, default="jev-latest", help="TypeSafe model identifier")
     args = parser.parse_args()
     if args.command == "audit":
         result = audit(args.vault)
@@ -63,7 +74,23 @@ def main():
         print(json.dumps(result, ensure_ascii=True))
         if result.get("status") == "error":
             raise SystemExit(1)
-    else:
+    elif args.command == "jev-evaluate":
+        try:
+            result = evaluate_live_source(
+                vault=args.vault,
+                workspace=args.workspace,
+                source_id=args.source_id,
+                content_hash=args.content_hash,
+                refresh=args.refresh,
+                model=args.model,
+            )
+        except (OSError, TypeError, ValueError, JevError) as exc:
+            print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=True))
+            raise SystemExit(1) from None
+        print(json.dumps(result, ensure_ascii=True))
+        if result.get("status") == "error":
+            raise SystemExit(1)
+    elif args.command == "verify-snapshot":
         errors = verify_snapshot(args.destination)
         print(json.dumps({"verified": not errors, "mismatches": errors}, ensure_ascii=False))
         if errors:

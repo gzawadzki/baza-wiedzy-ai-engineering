@@ -47,6 +47,29 @@ class SourceStore:
                                       (source_id, content_hash)).fetchone()
         return SourceRecord.model_validate_json(row[0]) if row else None
 
+    def get_revisions(self, source_id: str) -> list[str]:
+        rows = self.connection.execute(
+            "SELECT content_hash FROM source_revisions WHERE source_id=? ORDER BY content_hash",
+            (source_id,),
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    def get_deterministic(self, source_id: str, content_hash: str | None = None) -> SourceRecord | None:
+        if content_hash is not None:
+            return self.get(source_id, content_hash)
+        rows = self.connection.execute(
+            "SELECT content_hash, record_json FROM source_revisions WHERE source_id=? ORDER BY content_hash",
+            (source_id,),
+        ).fetchall()
+        if not rows:
+            return None
+        if len(rows) > 1:
+            hashes = [r[0] for r in rows]
+            raise ValueError(
+                f"Multiple revisions found for source '{source_id}': {', '.join(hashes)}"
+            )
+        return SourceRecord.model_validate_json(rows[0][1])
+
     def import_cache(self, path: Path) -> dict[str, int]:
         if not path.name.endswith("_raw_tweets.json"):
             raise ValueError("expected <handle>_raw_tweets.json")

@@ -1,6 +1,6 @@
 # Pipeline wiedzy — stan wdrożenia
 
-Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1 (częściowo): kontrakty Pydantic i offline import cache z rewizjami SQLite. **Nie ma jeszcze** filtrowania Jev, ekstrakcji, publikacji ani komend `run` i `resume`; pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
+Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite oraz filtrowanie Jev pojedynczych źródeł (`jev-evaluate`). **Nie ma jeszcze** pełnej ekstrakcji claimów, automatycznej publikacji notatek ani komend `run` i `resume`; pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
 
 Uruchamiaj z katalogu `extractor/` po instalacji `pip install -r requirements.txt` (do uruchomienia testów dodatkowo `pip install pytest`). Ścieżki raportu, snapshotu i workspace muszą wskazywać poza vault:
 
@@ -9,6 +9,7 @@ python -m kb_pipeline audit --vault .. --report ../../kb-audit.json
 python -m kb_pipeline snapshot --vault .. --destination ../../kb-snapshot
 python -m kb_pipeline verify-snapshot --destination ../../kb-snapshot
 python -m kb_pipeline import-cache --input . --vault .. --workspace ../../kb-workspace
+python -m kb_pipeline jev-evaluate --vault .. --workspace ../../kb-workspace --source-id x:123
 python -m pytest -q tests
 ```
 
@@ -48,3 +49,28 @@ python -m pytest -q tests
 ```
 
 Pełny zestaw obejmuje 60+ istniejących testów (w tym test subprocess dla tego pilot dry-run).
+
+## Filtrowanie Jev (`jev-evaluate`)
+
+Polecenie `jev-evaluate` uruchamia bramkę filtrowania jakościowego i tematycznego dla pojedynczego zaimportowanego źródła X:
+
+```bash
+python -m kb_pipeline jev-evaluate --vault .. --workspace ../../kb-workspace --source-id x:123
+```
+
+Opcjonalnie przy wieloznacznych rewizjach:
+```bash
+python -m kb_pipeline jev-evaluate --vault .. --workspace ../../kb-workspace --source-id x:123 --content-hash <sha256>
+```
+
+Wymuszenie ponownego zapytania do API (zamiast odczytu z lokalnego cache):
+```bash
+python -m kb_pipeline jev-evaluate --vault .. --workspace ../../kb-workspace --source-id x:123 --refresh
+```
+
+### Zasada działania i rozróżnienie etapów
+
+- **Filtrowanie, a nie weryfikacja czy publikacja**: `jev-evaluate` odpowiada wyłącznie na pytania o wartość inżynierską (`engineering_value`), wystarczalność kontekstu (`context_sufficient`) oraz routing tematyczny (`topic`, w tym prawidłowa kategoria `other`). Nie ekstrahuje twierdzeń, nie weryfikuje cytatów w notatkach ani nie modyfikuje vaulta. Vault pozostaje ściśle tylko do odczytu.
+- **Deterministyczna rezolucja rewizji**: Rekord źródłowy oraz powiązany kontekst (parent / quote) pobierane są z bazy `sources.sqlite3` w workspace. Jeśli dane źródło lub powiązany kontekst zawiera wiele rewizji, a nie wskazano jednoznacznego `--content-hash`, komenda kończy się błędem (`fail closed`).
+- **Idempotentne odtwarzanie i oszczędzanie zapytań**: Wyniki filtrowania są indeksowane w `StageCache` (`stage_cache.sqlite3`) według dokładnego hasha źródła, hasha zmontowanego kontekstu, modelu i wersji pytań. Ponowne uruchomienie dla tych samych danych korzysta z lokalnego cache i nie wysyła zapytania do API, chyba że podano flagę `--refresh`.
+- **Bezpieczeństwo workspace i brak sekretów w artefaktach**: Workspace musi leżeć poza vaultem (walidowane również dla dowiązań symbolicznych). Artefakty JSON w `workspace/artifacts` oraz wpisy w cache nie zawierają nagłówków, tokenów ani poświadczeń. Przy braku klucza API, błędach sieciowych lub niepoprawnej odpowiedzi API pipeline zatrzymuje się w bezpiecznym stanie z błędem JSON.
