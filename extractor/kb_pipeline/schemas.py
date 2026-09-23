@@ -100,6 +100,7 @@ class ClaimType(str, Enum):
 
 class Evidence(Contract):
     source_id: str
+    content_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     quote: str = Field(min_length=1)
     start: int | None = Field(default=None, ge=0)
     end: int | None = Field(default=None, ge=0)

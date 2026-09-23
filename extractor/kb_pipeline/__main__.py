@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .audit import audit, snapshot, verify_snapshot
+from .claim_extraction import extract_live_claims
 from .jev_provider import JevError
 from .live_jev import evaluate_live_source
 from .pilot import run_pilot
@@ -43,6 +44,14 @@ def main():
     j.add_argument("--content-hash", type=str, default=None, help="Content hash for ambiguous revisions")
     j.add_argument("--refresh", action="store_true", default=False, help="Refresh evaluation instead of using cache")
     j.add_argument("--model", type=str, default="jev-latest", help="TypeSafe model identifier")
+    c = commands.add_parser(
+        "claim-extract", help="Extract claims for an imported source revision filtered by Jev"
+    )
+    c.add_argument("--vault", type=Path, required=True, help="Vault directory")
+    c.add_argument("--workspace", type=Path, required=True, help="Operational state outside the vault")
+    c.add_argument("--source-id", type=str, required=True, help="X source ID (x:<numeric_id>)")
+    c.add_argument("--content-hash", type=str, required=True, help="Content hash for the source revision")
+    c.add_argument("--model", type=str, default="jev-latest", help="TypeSafe model identifier")
     args = parser.parse_args()
     if args.command == "audit":
         result = audit(args.vault)
@@ -85,6 +94,21 @@ def main():
                 model=args.model,
             )
         except (OSError, TypeError, ValueError, JevError) as exc:
+            print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=True))
+            raise SystemExit(1) from None
+        print(json.dumps(result, ensure_ascii=True))
+        if result.get("status") == "error":
+            raise SystemExit(1)
+    elif args.command == "claim-extract":
+        try:
+            result = extract_live_claims(
+                vault=args.vault,
+                workspace=args.workspace,
+                source_id=args.source_id,
+                content_hash=args.content_hash,
+                model=args.model,
+            )
+        except (OSError, TypeError, ValueError) as exc:
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=True))
             raise SystemExit(1) from None
         print(json.dumps(result, ensure_ascii=True))

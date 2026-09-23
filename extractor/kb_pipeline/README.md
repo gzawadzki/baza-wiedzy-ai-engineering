@@ -1,6 +1,6 @@
 # Pipeline wiedzy — stan wdrożenia
 
-Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite oraz filtrowanie Jev pojedynczych źródeł (`jev-evaluate`). **Nie ma jeszcze** pełnej ekstrakcji claimów, automatycznej publikacji notatek ani komend `run` i `resume`; pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
+Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). **Nie ma jeszcze** automatycznej publikacji notatek, niezależnej weryfikacji semantycznej ani komend `run` i `resume`; pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
 
 Uruchamiaj z katalogu `extractor/` po instalacji `pip install -r requirements.txt` (do uruchomienia testów dodatkowo `pip install pytest`). Ścieżki raportu, snapshotu i workspace muszą wskazywać poza vault:
 
@@ -10,6 +10,7 @@ python -m kb_pipeline snapshot --vault .. --destination ../../kb-snapshot
 python -m kb_pipeline verify-snapshot --destination ../../kb-snapshot
 python -m kb_pipeline import-cache --input . --vault .. --workspace ../../kb-workspace
 python -m kb_pipeline jev-evaluate --vault .. --workspace ../../kb-workspace --source-id x:123
+python -m kb_pipeline claim-extract --vault .. --workspace ../../kb-workspace --source-id x:123 --content-hash <sha256>
 python -m pytest -q tests
 ```
 
@@ -75,3 +76,26 @@ python -m kb_pipeline jev-evaluate --vault .. --workspace ../../kb-workspace --s
 - **Idempotentne odtwarzanie i oszczędzanie zapytań**: Wyniki filtrowania są indeksowane w `StageCache` (`stage_cache.sqlite3`) według dokładnego identyfikatora i hasha źródła, hasha zmontowanego kontekstu, modelu oraz wersji polityki i pytań wraz z progami. Ponowne uruchomienie dla tych samych danych korzysta z lokalnego cache i nie wysyła zapytania do API, chyba że podano flagę `--refresh`.
 - **Wymagany klucz API dla wywołań na żywo**: Dla wywołań niebędących odczytem z cache (oraz przy użyciu flagi `--refresh`) wymagana jest zmienna środowiskowa `TYPESAFE_API_KEY`. W przypadku jej braku lub pustej wartości pipeline zatrzymuje się w bezpiecznym stanie (`fail closed`) bez wysyłania zapytania do API i bez utrwalania częściowego stanu. Odczyty z cache (idempotent replay) działają offline i nie wymagają `TYPESAFE_API_KEY`.
 - **Bezpieczeństwo workspace i brak sekretów w artefaktach**: Workspace oraz katalog artefaktów muszą leżeć poza vaultem (walidowane również dla dowiązań symbolicznych). Artefakty JSON w `workspace/artifacts` oraz wpisy w cache nie zawierają nagłówków, tokenów ani poświadczeń. Przy błędach sieciowych lub niepoprawnej odpowiedzi API pipeline zatrzymuje się w bezpiecznym stanie z błędem JSON.
+
+## Ekstrakcja claimów (`claim-extract`)
+
+Polecenie `claim-extract` uruchamia deterministyczny, offline etap ekstrakcji konkretnych twierdzeń inżynierskich z pojedynczej, wskazanej rewizji źródła, która przeszła pomyślnie ocenę filtrowania Jev:
+
+```bash
+python -m kb_pipeline claim-extract --vault .. --workspace ../../kb-workspace --source-id x:123 --content-hash <sha256>
+```
+
+Opcjonalnie ze wskazaniem modelu (domyślnie spójnie z filtrem `jev-latest`):
+```bash
+python -m kb_pipeline claim-extract --vault .. --workspace ../../kb-workspace --source-id x:123 --content-hash <sha256> --model jev-latest
+```
+
+### Zasady działania, ograniczenia i granice etapu
+
+- **Wymóg istniejącej pozytywnej oceny Jev w cache**: Ekstrakcja wymaga obecności wpisu w `StageCache` z oceną `decision: extract`, `bypass: false` oraz zgodnymi hashami źródła i kontekstu powiązanego. W przypadku braku oceny, niejednoznacznych lub przeterminowanych rewizji, innego modelu/polityki lub decyzji `reject`/`defer` pipeline zatrzymuje się w bezpiecznym stanie (`fail closed`) bez wywoływania API i bez kosztów. Jev nigdy nie jest wywoływany automatycznie podczas ekstrakcji.
+- **Konserwatywna ekstrakcja bez fabrykowania treści**: Twierdzenia są wyodrębniane offline z tekstu focus source przy użyciu udokumentowanych heurystyk inżynierskich (rekomendacje, obserwacje empiryczne, ograniczenia, eksperymenty). Każde twierdzenie opiera się na dokładnym wycinku tekstu źródłowego (`exact quote`), a jego poprawność jest weryfikowana deterministycznym sprawdzeniem podciągu i offsetów `[start:end]` względem przypiętej rewizji. Jeśli źródło nie zawiera jednoznacznych twierdzeń technicznych, generowana jest pusta propozycja (`claims: []`), a nie wymyślone twierdzenia.
+- **Stabilne identyfikatory i metadane dowodowe**: Każde twierdzenie otrzymuje stabilny identyfikator powiązany z rewizją źródła oraz slotem pozycji. W dowodach (`evidence`) zapisywany jest dokładny `content_hash` źródła. Status kontekstu (`context_status`) oraz brakujące identyfikatory (`missing_ids`) są jawnie odnotowane w propozycji i ograniczeniach twierdzenia.
+- **Artefakty stagingowe wyłącznie poza vaultem**: Propozycja maszynowa (`workspace/proposals/claim_proposals_*.json`) oraz czytelna wersja Markdown (`workspace/proposals/claim_proposals_*.md`) zapisywane są wyłącznie w workspace poza vaultem. Zostają wyraźnie oznaczone jako niezweryfikowane i nieopublikowane (`UNVERIFIED / UNPUBLISHED — STAGING ONLY`).
+- **Niezmienność vaulta (vault immutability)**: Polecenie nie tworzy ani nie modyfikuje żadnych notatek Obsidiana w vaultcie. Niezależna weryfikacja semantyczna oraz integracja/publikacja pozostają odroczone do kolejnych etapów.
+- **Idempotentne odtwarzanie (replay)**: Ponowne wywołanie z identycznymi parametrami korzysta z zapisanego stanu w `StageCache` (`cached: true`) i nie modyfikuje plików.
+
