@@ -20,17 +20,22 @@ Vault gromadzi trwałą wiedzę o projektowaniu systemów AI. Notatki powinny by
 - [[Interpretable Context Methodology]]
 - [[Context Compaction]]
 - [[Bezpieczny punkt kompaktowania]]
+- [[Architektura KV Cache i Rozumowanie Latentne]]
 - [[Harness]]
 - [[Praca z harnessem]]
+- [[Sandbox i Granice Bezpieczeństwa Agenta]]
 - [[Firstmate i Agenci Wykonawczy]]
+- [[Dynamiczne Skille i Metaprogramowanie Agenta]]
 - [[Prompt Architecture]]
 
-### Metryki i Ewaluacja
+### Metryki, Ewaluacja i Modele
 
 - [[Rework Rate]]
 - [[Eval Set z realnych sesji]]
 - [[Selektywna weryfikacja kodu]]
 - [[Stabilność modeli i przestrzeganie promptu]]
+- [[Test-Time Compute i Reasoning Tokens]]
+- [[Kaskady Modeli i Routing Pewności]]
 - [[Weryfikator]]
 
 ### Źródła

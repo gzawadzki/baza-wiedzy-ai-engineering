@@ -78,7 +78,17 @@ class ExtractedTip(BaseModel):
     )
     vault_links: List[str] = Field(
         default_factory=list,
-        description="Sugerowane linki do pojęć w Obsidianie, np. ['[[Harness]]', '[[Weryfikator]]', '[[Interpretable Context Methodology]]', '[[Jev]]'] jeśli pasują."
+        description=(
+            "Sugerowane linki do pojęć w Obsidianie z bazy wiedzy, np.: "
+            "['[[Harness]]', '[[Weryfikator]]', '[[Interpretable Context Methodology]]', '[[Jev]]', "
+            "'[[Test-Time Compute i Reasoning Tokens]]', '[[Sandbox i Granice Bezpieczeństwa Agenta]]', "
+            "'[[Kaskady Modeli i Routing Pewności]]', '[[Dynamiczne Skille i Metaprogramowanie Agenta]]', "
+            "'[[Architektura KV Cache i Rozumowanie Latentne]]', '[[Context Compaction]]', "
+            "'[[Bezpieczny punkt kompaktowania]]', '[[Persistencja stanu agenta]]', "
+            "'[[Firstmate i Agenci Wykonawczy]]', '[[Rework Rate]]', '[[Eval Set z realnych sesji]]', "
+            "'[[Selektywna weryfikacja kodu]]', '[[Stabilność modeli i przestrzeganie promptu]]', "
+            "'[[Prompt Architecture]]']. Używaj wyłącznie trafnych pojęć z listy lub stwórz precyzyjne nowe."
+        )
     )
     original_quote: Optional[str] = Field(
         default=None,
@@ -627,8 +637,83 @@ def main():
     # Zachowaj chronologiczny porządek (najnowsze na górze)
     valuable_results.sort(key=lambda item: item["tweet"].get("date", ""), reverse=True)
 
-    # 5. Generowanie Markdown do Obsidiana
+    # 5. Normalizacja linków Obsidianowych do kanonicznych pojęć
     root_dir = Path(__file__).parent.parent
+    canonical_files = {f.stem.lower(): f.stem for f in root_dir.glob("Pojęcia/*.md")}
+    canonical_files.update({f.stem.lower(): f.stem for f in root_dir.glob("Narzędzia/*.md")})
+    canonical_files.update({f.stem.lower(): f.stem for f in root_dir.glob("Procesy/*.md")})
+
+    concept_rules = {
+        "reasoning": "Test-Time Compute i Reasoning Tokens",
+        "compute": "Test-Time Compute i Reasoning Tokens",
+        "overthinking": "Test-Time Compute i Reasoning Tokens",
+        "token throughput": "Test-Time Compute i Reasoning Tokens",
+        "sandbox": "Sandbox i Granice Bezpieczeństwa Agenta",
+        "bezpieczeństw": "Sandbox i Granice Bezpieczeństwa Agenta",
+        "uprawnień": "Sandbox i Granice Bezpieczeństwa Agenta",
+        "izolacj": "Sandbox i Granice Bezpieczeństwa Agenta",
+        "kaskad": "Kaskady Modeli i Routing Pewności",
+        "cascade": "Kaskady Modeli i Routing Pewności",
+        "dobór modeli": "Kaskady Modeli i Routing Pewności",
+        "routing": "Kaskady Modeli i Routing Pewności",
+        "skill": "Dynamiczne Skille i Metaprogramowanie Agenta",
+        "kv cache": "Architektura KV Cache i Rozumowanie Latentne",
+        "latent": "Architektura KV Cache i Rozumowanie Latentne",
+        "multi-token": "Architektura KV Cache i Rozumowanie Latentne",
+        "mtp": "Architektura KV Cache i Rozumowanie Latentne",
+        "compaction": "Context Compaction",
+        "kompakcj": "Context Compaction",
+        "kontekst": "Context Compaction",
+        "context window": "Context Compaction",
+        "bezpieczny punkt": "Bezpieczny punkt kompaktowania",
+        "checkpoint": "Bezpieczny punkt kompaktowania",
+        "persistencj": "Persistencja stanu agenta",
+        "trwały stan": "Persistencja stanu agenta",
+        "firstmate": "Firstmate Agent",
+        "leaf node": "Firstmate i Agenci Wykonawczy",
+        "sub-agent": "Firstmate i Agenci Wykonawczy",
+        "subagent": "Firstmate i Agenci Wykonawczy",
+        "rework": "Rework Rate",
+        "eval": "Eval Set z realnych sesji",
+        "ground truth": "Eval Set z realnych sesji",
+        "etykietowan": "Eval Set z realnych sesji",
+        "code review": "Code Review",
+        "weryfikacj": "Weryfikacja krokowa",
+        "weryfikator": "Weryfikator",
+        "bypass": "CI Check Bypass Confirmation",
+        "system prompt": "Stabilność modeli i przestrzeganie promptu",
+        "stabilność": "Stabilność modeli i przestrzeganie promptu",
+        "prompt architecture": "Prompt Architecture",
+        "prompt": "Prompt Architecture",
+        "cache": "Prompt Architecture",
+        "jev": "Jev",
+        "typesafe": "TypeSafe — przewodnik praktyczny",
+        "harness": "Harness",
+    }
+
+    def resolve_concept(link_text: str) -> str:
+        clean = link_text.strip().replace("[[", "").replace("]]", "")
+        if clean.lower() in canonical_files:
+            return canonical_files[clean.lower()]
+        lower_c = clean.lower()
+        for k, dest in concept_rules.items():
+            if k in lower_c:
+                return dest
+        return "Harness"
+
+    for item in valuable_results:
+        tip: ExtractedTip = item["tip_obj"]
+        normalized_links = []
+        for l in tip.vault_links:
+            dest = resolve_concept(l)
+            clean_name = l.strip().replace("[[", "").replace("]]", "")
+            if dest == clean_name:
+                normalized_links.append(f"[[{dest}]]")
+            else:
+                normalized_links.append(f"[[{dest}|{clean_name}]]")
+        tip.vault_links = list(dict.fromkeys(normalized_links))
+
+    # 6. Generowanie Markdown do Obsidiana
     if args.output:
         output_file = root_dir / args.output
     else:

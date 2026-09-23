@@ -1,7 +1,7 @@
 ---
 autor: "@teortaxesTex"
 źródło: "https://x.com/teortaxesTex"
-wygenerowano: 2026-09-23 02:10
+wygenerowano: "2026-09-23 02:25"
 typ: synteza-wiedzy
 tagi:
   - teortaxestex
@@ -18,180 +18,179 @@ tagi:
 
 > Wpisy, w których autor podważa powszechne przekonania branżowe lub prezentuje tezy stojące w sprzeczności z innymi praktykami:
 
-- **[Kompakcja treningowa redukuje znaczenie rozmiaru KV cache przy długim kontekście](https://x.com/teortaxesTex/status/2102545198199038197):** Teza stoi w sprzeczności z dominującym konsensusem, że rozmiar KV cache / pamięci kontekstu jest krytycznym wąskim gardłem długiego kontekstu i wymaga agresywnych technik kompresji (pruning, sliding window, summarization). Autor twierdzi, że kompakcja treningowa czyni ten problem w dużej mierze nieaktualnym. Do rozstrzygnięcia: czy 890 MB/1M to realny, powszechnie osiągalny poziom, czy wartość specyficzna dla konkretnej architektury/modelu, oraz czy 'reasoning with outputs' faktycznie zastępuje potrzebę zarządzania cache.
-- **[Temporalna dysagregacja jako źródło ground truth do treningu modeli predykcyjnych](https://x.com/teortaxesTex/status/2102173977879757153):** Autor przeciwstawia się rozpowszechnionemu przekonaniu, że prognozowanie przyszłości jest fundamentalnie trudniejsze od modelowania danych historycznych z powodu braku ground truth. Twierdzi, że to 'actually easy', ponieważ ground truth dla przeszłości istnieje w formie temporalnie rozproszonej. Sporne pozostaje, czy rekonstrukcja pominiętych danych historycznych rzeczywiście uczy ekstrapolacji w warunkach niestacjonarności i zmiany reżimu — krytycy wskazują, że inter-/ekstrapolacja to nie to samo zadanie.
-- **[Brak ground truth blokuje rzetelną ocenę online; weryfikowalność domen kluczem do ewaluacji](https://x.com/teortaxesTex/status/2102172327232385279):** Autor podważa powszechną praktykę używania LLM jako sędziów (LLM-as-judge) do oceny zadań otwartych, wskazując na brak ground truth i ryzyko niewiarygodnych ocen. Do rozstrzygnięcia: czy LLM-as-judge może być wystarczający przy braku weryfikowalnych sygnałów, czy konieczne są hybrydowe metody z formalną weryfikacją.
+- **[Kompresja treningowa redukuje znaczenie małego KV cache — długi kontekst staje się praktyczny](https://x.com/teortaxesTex/status/2102545198199038197):** Autor kwestionuje powszechny konsensus, że rozmiar KV cache / okna kontekstowego jest kluczowym ograniczeniem wymagającym agresywnej kompresji, przycinania czy RAG. Teza: dzięki kompresji na etapie treningu i niskiemu narzutowi pamięciowemu (~890 MB/1M tokenów) można pozwolić modelowi na ciągłe rozumowanie z zachowaniem wyjść. Do rozstrzygnięcia: czy podany współczynnik pamięciowy jest reprezentatywny dla realnych wdrożeń, oraz czy 'training compaction' faktycznie eliminuje potrzebę zarządzania kontekstem w produkcji.
+- **[Rozumowanie latentne a efektywna głębokość szeregowa po RL i KV cache](https://x.com/teortaxesTex/status/2102523033499877448):** Autor podważa popularny pogląd, że modele autoregresyjne jedynie przewidują następny token. Twierdzi, że duże modele rozumujące po długim RL zachowują się bardziej forward-looking i przechowują częściowe obliczenia, zwiększając efektywną głębokość szeregową. Spór dotyczy tego, ile rozumowania pochodzi z treści tokenów, a ile z samej pojemności reprezentacji latentnej i KV cache.
+- **[Logicznie ustrukturyzowany sygnał treningowy generalizuje rozumowanie, ale styl nie jest g-loaded](https://x.com/teortaxesTex/status/2102174532547080559):** Teza podważa dwa popularne przekonania branżowe: (1) że RL jest wąski i domenowo ograniczony — autor pokazuje szeroki transfer z matematyki/kodu na pisanie; (2) że wszystkie zdolności modelu są ze sobą skorelowane (jeden czynnik g) — autor twierdzi, że styl jest słabo g-loaded i nie transferuje razem z rozumowaniem. Do rozstrzygnięcia: czy obserwowany transfer R1 (math/coding RL → lepszy writer niż V3) wynika z generalizacji rozumowania, czy z efektów ubocznych treningu (np. zmiany dystrybucji, RLHF, długości CoT), które przypadkowo poprawiają styl.
 
 ---
 
 ## Spis kategorii
 
-- [Inżynieria kontekstu / zarządzanie pamięcią](#inżynieria-kontekstu--zarządzanie-pamięcią) (1)
-- [Architektura modeli / Teoria treningu i mechanistyczna interpretowalność](#architektura-modeli--teoria-treningu-i-mechanistyczna-interpretowalność) (1)
-- [Architektura modeli / Rozumowanie latentne i inżynieria kontekstu](#architektura-modeli--rozumowanie-latentne-i-inżynieria-kontekstu) (1)
-- [Trening modeli / Transfer i generalizacja](#trening-modeli--transfer-i-generalizacja) (1)
-- [Trening modeli / Inżynieria danych](#trening-modeli--inżynieria-danych) (1)
-- [Prompt Architecture / Inżynieria promptów](#prompt-architecture--inżynieria-promptów) (1)
-- [Ewaluacja modeli i weryfikacja](#ewaluacja-modeli-i-weryfikacja) (1)
+- [Inżynieria kontekstu / KV cache i pamięć](#inżynieria-kontekstu--kv-cache-i-pamięć) (1)
+- [Architektura modeli / Trening](#architektura-modeli--trening) (1)
+- [Architektura modeli / Rozumowanie](#architektura-modeli--rozumowanie) (1)
+- [Architektura modeli / rozumowanie / Chain-of-Thought](#architektura-modeli--rozumowanie--chain-of-thought) (1)
+- [Trening modeli / RL / Generalizacja zdolności](#trening-modeli--rl--generalizacja-zdolności) (1)
+- [Inżynieria promptów / Systemy agentowe](#inżynieria-promptów--systemy-agentowe) (1)
+- [Benchmarking i weryfikacja / sygnały treningowe](#benchmarking-i-weryfikacja--sygnały-treningowe) (1)
 
 ---
 
-## Inżynieria kontekstu / zarządzanie pamięcią
+## Inżynieria kontekstu / KV cache i pamięć
 
-### Kompakcja treningowa redukuje znaczenie rozmiaru KV cache przy długim kontekście
+### Kompresja treningowa redukuje znaczenie małego KV cache — długi kontekst staje się praktyczny
 
 - **Data:** `Tue Sep 22 23:46:53 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102545198199038197)
 - **Rodzaj:** Komentarz w dyskusji (@awesome_ruler_)
-- **Powiązane pojęcia:** [[Harness|KV cache]] [[Context Compaction|Kompakcja kontekstu]] [[Harness|Long-context]] [[Harness|Zarządzanie pamięcią agenta]] [[Stabilność modeli i przestrzeganie promptu|Reasoning przez outputy]]
+- **Powiązane pojęcia:** [[Architektura KV Cache i Rozumowanie Latentne|KV cache]] [[Context Compaction|Kompresja kontekstu / training compaction]] [[Context Compaction|Inżynieria kontekstu]] [[Context Compaction|Długi kontekst]] [[Harness|Chain-of-thought]] [[Harness|Zarządzanie pamięcią modelu]]
 
 **Kontekst / Problem:**
-Dyskusja w wątku o ograniczeniach pamięciowych długiego kontekstu i rozmiarze cache. Autor odpowiada na argument, że mniejszy cache to problem, i twierdzi, że znaczenie rozmiaru cache spada dzięki postępom w kompakcji treningowej — przy ~890 MB na 1M tokenów kontekstu można po prostu kontynuować rozumowanie na wyjściach (reasoning carried through outputs) bez agresywnego zarządzania pamięcią.
+Dyskusja w wątku o zarządzaniu kontekstem i pamięcią cache w modelach LLM. Autor odpowiada na argument, że mniejszy cache jest kluczowy, i twierdzi, że dzięki postępom w kompresji na etapie treningu (training compaction) oraz niskiemu narzutowi pamięciowemu (~890 MB na 1M tokenów kontekstu) agresywna optymalizacja rozmiaru cache przestaje być wąskim gardłem — model może po prostu kontynuować rozumowanie wraz z wyjściami.
 
 **Rada inżynierska:**
-Nie projektuj harnessu ani pipeline'u wokół przedwczesnej optymalizacji rozmiaru cache/KV. Wraz z dojrzałą kompakcją treningową (training compaction) ślad pamięciowy kontekstu maleje do poziomu rzędu ~890 MB na 1M tokenów, co sprawia, że wąskim gardłem przestaje być sam cache, a strategia 'utrzymuj rozumowanie w outputach' (persist reasoning w wyjściach, nie w cache) staje się praktyczna i wystarczająca.
+Nie optymalizuj przedwcześnie rozmiaru KV cache ani nie sięgaj od razu po agresywne strategie przycinania/kompresji kontekstu. Wraz z dojrzewaniem technik kompresji treningowej narzut pamięciowy kontekstu spada (ok. 890 MB / 1M tokenów), więc bardziej opłacalne bywa utrzymywanie długiego, ciągłego rozumowania z zachowaniem wyjść (chain-of-thought + outputs) niż walka o każdy bajt cache. Projektuj harness tak, by pozwalał modelowi 'po prostu dalej rozumować', zamiast forsować radykalne skracanie kontekstu.
 
 **Uwaga / Anty-wzorzec:**
-Traktowanie rozmiaru cache/KV jako głównego ograniczenia i budowanie architektury wokół agresywnego przycinania/kompresji kontekstu — to przedwczesna optymalizacja, gdy kompakcja na poziomie treningu i tak redukuje footprint.
+Traktowanie rozmiaru cache jako nadrzędnego ograniczenia i wymuszanie agresywnej kompresji/RAG-owego przycinania kontekstu, gdy model i tak poradziłby sobie z dłuższym kontekstem dzięki lepszej kompresji treningowej — prowadzi to do utraty informacji i gorszego rozumowania bez realnej korzyści pamięciowej.
 
 **⚡ Kwestia sporna / do rozstrzygnięcia:**
-Teza stoi w sprzeczności z dominującym konsensusem, że rozmiar KV cache / pamięci kontekstu jest krytycznym wąskim gardłem długiego kontekstu i wymaga agresywnych technik kompresji (pruning, sliding window, summarization). Autor twierdzi, że kompakcja treningowa czyni ten problem w dużej mierze nieaktualnym. Do rozstrzygnięcia: czy 890 MB/1M to realny, powszechnie osiągalny poziom, czy wartość specyficzna dla konkretnej architektury/modelu, oraz czy 'reasoning with outputs' faktycznie zastępuje potrzebę zarządzania cache.
+Autor kwestionuje powszechny konsensus, że rozmiar KV cache / okna kontekstowego jest kluczowym ograniczeniem wymagającym agresywnej kompresji, przycinania czy RAG. Teza: dzięki kompresji na etapie treningu i niskiemu narzutowi pamięciowemu (~890 MB/1M tokenów) można pozwolić modelowi na ciągłe rozumowanie z zachowaniem wyjść. Do rozstrzygnięcia: czy podany współczynnik pamięciowy jest reprezentatywny dla realnych wdrożeń, oraz czy 'training compaction' faktycznie eliminuje potrzebę zarządzania kontekstem w produkcji.
 
 > **Cytat:** *"@awesome_ruler_ @industriaalist @jayden_teoh_ Well, smaller cache doesn't matter much now
 we're starting to have good training compaction, and at 890 Mb/1M context, you can just keep reasoning with outputs"*
 
 ---
 
-## Architektura modeli / Teoria treningu i mechanistyczna interpretowalność
+## Architektura modeli / Trening
 
-### MTP to red herring — pojedyncza predykcja tokenu wystarcza dla look-ahead w aktywacjach; liczy się efektywna głębokość obwodu
+### MTP to fałszywy trop — efektywna głębokość obwodu jest kluczowa
 
 - **Data:** `Tue Sep 22 22:59:28 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102533265265500175)
 - **Rodzaj:** Komentarz w dyskusji (@rudzinskimaciej)
-- **Powiązane pojęcia:** [[Harness|Multi-Token Prediction]] [[Harness|Next-Token Prediction]] [[Harness|Effective Circuit Depth]] [[Harness|Look-ahead w aktywacjach]] [[Harness|Mechanistic Interpretability]] [[Harness|Residual Stream]] [[Harness|Ablacja warstw]]
+- **Powiązane pojęcia:** [[Architektura KV Cache i Rozumowanie Latentne|Multi-Token Prediction]] [[Harness|Effective Circuit Depth]] [[Harness|Look-ahead w aktywacjach]] [[Harness|Predykcja pojedynczego tokena]] [[Harness|Głębokość obwodu obliczeniowego]]
 
 **Kontekst / Problem:**
-Dyskusja w wątku o tym, czy wielotokenowa predykcja (MTP, Multi-Token Prediction) jest niezbędna, aby model wykazywał zdolność 'patrzenia w przyszłość' (look-ahead) i planowania. Autor odrzuca tezę, że MTP jest źródłem tych zdolności, argumentując, że sam cel przewidywania pojedynczego następnego tokenu już wymusza na aktywacjach reprezentacje wyprzedzające. Przesuwa pytanie badawcze z celu treningowego na *efektywną* głębokość obwodu obliczeniowego (effective circuit depth) — ile warstw transformacji faktycznie uczestniczy w wyliczeniu danego wyniku.
+Dyskusja dotyczy tego, czy wielotokenowa predykcja (Multi-Token Prediction, MTP) jest niezbędna, aby model wykazywał zdolność 'patrzenia w przyszłość' (look-ahead) w swoich aktywacjach. Autor argumentuje, że sam cel predykcji pojedynczego tokena wystarcza, by aktywacje już zawierały informację o przyszłych tokenach, a prawdziwym problemem inżynierskim jest efektywna głębokość obwodu obliczeniowego (effective circuit depth), a nie sam cel treningowy.
 
 **Rada inżynierska:**
-Nie zakładaj, że MTP (lub inny dodatkowy cel treningowy) jest konieczny do uzyskania zachowań look-ahead/planowania — samo autoregresyjne przewidywanie następnego tokenu już indukuje w aktywacjach reprezentacje wyprzedzające. Zamiast debatować nad celem treningowym, mierz *efektywną* głębokość obwodu: ile warstw realnie wnosi wkład do danego wyniku (np. przez ablacje warstw, patching aktywacji, analizę residual stream). To rozdziela 'co model optymalizuje' od 'jak głęboko faktycznie liczy'.
+Nie zakładaj, że MTP (Multi-Token Prediction) jest konieczne do uzyskania zdolności look-ahead w aktywacjach. Cel predykcji pojedynczego tokena już wymusza na modelu kodowanie informacji o przyszłych tokenach w aktywacjach. Zamiast tego skup się na pomiarze i optymalizacji *efektywnej* głębokości obwodu (effective circuit depth) — czyli ile warstw obliczeń jest faktycznie wykorzystywanych do przetwarzania danego tokena. To jest właściwa metryka do analizy zdolności modelu do planowania i rozumowania.
 
 **Uwaga / Anty-wzorzec:**
-Traktowanie MTP jako wyjaśnienia zdolności look-ahead — to red herring, który odwraca uwagę od właściwego pytania. Anty-wzorzec: mylenie celu treningowego (objective) z efektywną głębokością obliczeniową (circuit depth) i wyciąganie wniosków o architekturze z samej obecności dodatkowego celu.
+Traktowanie MTP jako głównego czynnika umożliwiającego modelowi 'patrzenie w przyszłość' — to fałszywy trop (red herring). Również mylenie nominalnej liczby warstw z efektywną głębokością obwodu, która może być znacznie mniejsza ze względu na rezydualne połączenia i równoległe ścieżki.
 
-> **Cytat:** *"MTP is a red herring. Single token prediction objective is sufficient for activations to already "look ahead"
-my question is about *effective* circuit depth"*
+> **Cytat:** *"MTP is a red herring. Single token prediction objective is sufficient for activations to already "look ahead" my question is about *effective* circuit depth"*
 
 ---
 
-## Architektura modeli / Rozumowanie latentne i inżynieria kontekstu
+## Architektura modeli / Rozumowanie
 
-### KV cache jako rozszerzenie efektywnej głębokości serialnej w modelach rozumujących
+### Rozumowanie latentne a efektywna głębokość szeregowa po RL i KV cache
 
 - **Data:** `Tue Sep 22 22:18:48 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102523033499877448)
 - **Rodzaj:** Komentarz w dyskusji (@industriaalist)
-- **Powiązane pojęcia:** [[Harness|KV cache]] [[Harness|Rozumowanie latentne]] [[Harness|Filler tokens]] [[Harness|Efektywna głębokość serialna]] [[Harness|Scratchpad]] [[Context Compaction|Inżynieria kontekstu]] [[Harness|Modele rozumujące po RL]]
+- **Powiązane pojęcia:** [[Architektura KV Cache i Rozumowanie Latentne|KV cache]] [[Test-Time Compute i Reasoning Tokens|Latent reasoning]] [[Harness|Filler tokens]] [[Harness|Efektywna głębokość szeregowa]] [[Harness|Modele rozumujące]] [[Harness|Reinforcement Learning]] [[Harness|Chain-of-thought]] [[Context Compaction|Inżynieria kontekstu]] [[Harness|Transformer]]
 
 **Kontekst / Problem:**
-Autor odpowiada na tezę, że większość rozumowania można wykonać w przestrzeni latentnej, lepiej niż w języku naturalnym, z wyjątkiem wywołań narzędzi. Podnosi problem: jaka część tego efektu wynika z samego skalowania reprezentacji latentnej przez KV cache, niezależnie od treści znaczącej w sekwencji. Powołuje się na eksperymenty Astra z filler tokens. Twierdzi, że duże modele rozumujące po RL są bardziej 'patrzące w przyszłość' i przechowują częściowe obliczenia, co daje większą efektywną głębokość serialną niż stała głębokość pojedynczego forward pass.
+Dyskusja pod wpisem o tym, że większość rozumowania modelu może odbywać się w przestrzeni latentnej, lepiej niż w języku naturalnym. Autor zgadza się z tezą, ale pyta, jaka część tego efektu wynika wyłącznie ze skalowania reprezentacji latentnej przez KV cache, nawet po odjęciu wkładu znaczącej treści sekwencji. Przywołuje eksperymenty Astra ze skalowaniem filler tokenów. Twierdzi, że duże modele rozumujące po długim RL są bardziej wybiegające w przyszłość i przechowują częściowe obliczenia, które składają się na dłuższą efektywną głębokość szeregową forward passów o stałej głębokości.
 
 **Rada inżynierska:**
-Projektując prompty i systemy agentowe, traktuj kontekst oraz KV cache nie tylko jako bierną pamięć treści, lecz także jako pamięć roboczą/scratchpad dla częściowych obliczeń. U modeli rozumujących po RL kolejne tokeny mogą zwiększać efektywną głębokość serialną ponad ograniczenie wynikające ze stałej liczby warstw. Warto świadomie zarządzać długością kontekstu, zostawiać miejsce na tokeny robocze i testować, czy wydłużenie reprezentacji latentnej — nawet przez filler tokens — poprawia wyniki. Pamiętaj jednak, że tokeny znaczące dają większy zysk niż wypełniacze.
+W ewaluacji i projektowaniu harnessów rozdzielaj wkład znaczących tokenów od samej pojemności kontekstu: KV cache, filler tokeny i inne nośniki obliczeń latentnych mogą zwiększać efektywną głębokość szeregową modelu. Nie interpretuj modelu wyłącznie przez pryzmat predykcji następnego tokenu; po intensywnym RL model może odkładać częściowe obliczenia w reprezentacji latentnej, co przypomina forward-looking computation. Testuj ablacje: filler tokeny vs tokeny znaczące, długość kontekstu, obecność KV cache, oraz mierz wpływ na rozumowanie.
 
 **Uwaga / Anty-wzorzec:**
-Anty-wzorzec: zakładanie, że model wyłącznie 'przewiduje następny token', a kontekst służy tylko jako bierna pamięć informacji. Drugi anty-wzorzec: wnioskowanie, że filler tokens lub sama długość KV cache zastąpią wartościową treść — autor zaznacza, że tokeny znaczące pomagają bardziej, a efekt filler tokens może być mylący bez kontroli eksperymentalnej.
+Anty-wzorzec: redukowanie działania modelu do „to tylko przewidywanie następnego tokenu”. Ignorowanie latentnej pojemności KV cache, filler tokenów i RL-owego przechowywania częściowych obliczeń prowadzi do błędnych wniosków o skalowaniu, głębokości rozumowania i roli języka naturalnego w CoT.
+
+**⚡ Kwestia sporna / do rozstrzygnięcia:**
+Autor podważa popularny pogląd, że modele autoregresyjne jedynie przewidują następny token. Twierdzi, że duże modele rozumujące po długim RL zachowują się bardziej forward-looking i przechowują częściowe obliczenia, zwiększając efektywną głębokość szeregową. Spór dotyczy tego, ile rozumowania pochodzi z treści tokenów, a ile z samej pojemności reprezentacji latentnej i KV cache.
 
 > **Cytat:** *"> most of the reasoning can be done in latent space (except like tool calls) and in fact, much better than in nat lang
 Yes. no dispute. The issue: how much of that is afforded just by scaling the latent representation via KV cache, even modulo the meaningful sequence content? See Astra's scaling with filler tokens. Meaningful tokens, ofc, help more. I think there's a popular underestimation where "it just outputs the next token". I think large reasoning models after a lot of RL are more forward-looking, and basically store partial computations that add up to longer effective serial depth of fixed-depth forward passes. Does this make sense?"*
 
 ---
 
-## Trening modeli / Transfer i generalizacja
+## Architektura modeli / rozumowanie / Chain-of-Thought
 
-### Ustrukturyzowany sygnał treningowy (kod, matematyka) generalizuje rozumowanie lepiej niż styl
+### Długość CoT a efektywna głębokość obwodu w modelach płytkich
+
+- **Data:** `Tue Sep 22 21:54:16 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102516859874759155)
+- **Rodzaj:** Wpis autorski
+- **Powiązane pojęcia:** [[Harness|Chain-of-Thought]] [[Harness|Efektywna głębokość obliczeniowa]] [[Harness|Głębokość modelu vs rozumowanie]] [[Prompt Architecture|Kompresja promptu]] [[Harness|Agent harness]]
+
+**Kontekst / Problem:**
+Autor rozważa, że pewien efekt architektoniczny — prawdopodobnie korzyść z głębokości lub zdolności obliczeniowych — jest silny przy predykcji kolejnego tokenu na sekwencji N tokenów, ale mocno osłabiony przy rozumowaniu. Chce ustalić najlepszy możliwy związek między długością Chain-of-Thought a efektywną głębokością obwodu transformerowego. Podkreśla, że modele płytkie są znacznie tańsze, więc pytanie ma bezpośrednie znaczenie dla doboru modelu i projektowania harnessu.
+
+**Rada inżynierska:**
+Traktuj długość CoT jako przybliżenie dodatkowej głębokości obliczeniowej, ale nie zakładaj liniowej równoważności między liczbą kroków CoT a warstwami modelu. Przy kompilacji promptów i benchmarkingu porównuj koszt/jakość w układzie: płytki model + długi CoT versus głęboki model + krótki CoT. Dla zadań wymagających rozumowania efekt kompensacji może być znacznie słabszy niż dla predykcji kolejnego tokenu, więc waliduj empirycznie zamiast opierać się na intuicji.
+
+**Uwaga / Anty-wzorzec:**
+Optymistyczne założenie, że wydłużanie CoT w płytkim modelu w pełni skompensuje brak głębokości. Autor sugeruje, że efekt jest masywnie osłabiony dla rozumowania, co oznacza, że tani model płytki z długim CoT może nie dorównać głębszemu modelowi w zadaniach reasoningowych.
+
+> **Cytat:** *"I strongly suspect that this effect is powerful for next token prediction over N tokens, but massively attenuated for reasoning. What I want to know is the best-case relation between CoT length and effective circuit depth. And given how much cheaper shallow models are… https://t.co/alkoyPXIME"*
+
+---
+
+## Trening modeli / RL / Generalizacja zdolności
+
+### Logicznie ustrukturyzowany sygnał treningowy generalizuje rozumowanie, ale styl nie jest g-loaded
 
 - **Data:** `Mon Sep 21 23:13:59 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102174532547080559)
 - **Rodzaj:** Komentarz w dyskusji (@phl43)
-- **Powiązane pojęcia:** [[Harness|Sygnał treningowy]] [[Harness|Generalizacja rozumowania]] [[Harness|Pretraining vs RL]] [[Harness|Transfer umiejętności]] [[Harness|Dane treningowe: kod i matematyka]] [[Harness|Czynnik g modelu]]
+- **Powiązane pojęcia:** [[Harness|Generalizacja rozumowania]] [[Harness|g-loaded capabilities]] [[Harness|RL na kodzie i matematyce]] [[Harness|Transfer umiejętności w LLM]] [[Harness|Pretraining sygnał]] [[Harness|DeepSeek R1]] [[Harness|Styl vs rozumowanie]]
 
 **Kontekst / Problem:**
-Dyskusja o tym, jaki rodzaj danych treningowych (pretraining i RL) prowadzi do transferu umiejętności rozumowania na inne dziedziny. Autor przeciwstawia sygnał logicznie ustrukturyzowany (kod, matematyka) względem sygnału stylistycznego, argumentując empirycznie: modele pretrenowane na kodzie poprawiły się niemal we wszystkich zadaniach, a DeepSeek-R1 trenowany RL na matematyce i kodzie stał się znacznie lepszym pisarzem niż bazowy V3.
+Dyskusja o tym, jak rodzaj sygnału treningowego wpływa na transfer umiejętności między domenami. Autor odpowiada na tezę, że trening w jednej domenie nie poprawia ogólnych zdolności modelu, argumentując empirycznie, że logicznie ustrukturyzowane sygnały (kod, matematyka) generalizują rozumowanie na niemal wszystkie zadania.
 
 **Rada inżynierska:**
-Do budowy zdolności rozumowania inwestuj w sygnał treningowy o ścisłej strukturze logicznej — kod i matematyka — zarówno na etapie pretreningu, jak i RL. Taki sygnał generalizuje: podnosi wyniki na zadaniach odległych od dziedziny treningu (np. pisanie, ogólne rozumowanie). Wniosek inżynierski: jeśli celem jest ogólna kompetencja modelu (wysokie 'g'), dobieraj dane treningowe według kryterium gęstości logicznej struktury, a nie według atrakcyjności stylistycznej.
+Traktuj kod i matematykę jako uniwersalny nośnik sygnału rozumowania: (1) pretraining na kodzie podnosi wyniki niemal na wszystkich zadaniach, (2) RL na matematyce i kodzie (np. DeepSeek R1) czyni model znacznie lepszym także w zadaniach niewymagających logiki, np. w pisaniu (R1 > V3 jako writer). Wniosek inżynierski: inwestuj w logicznie ustrukturyzowany sygnał treningowy, bo transferuje szerzej niż sygnał stylistyczny. Jednocześnie nie zakładaj transferu cech stylistycznych — styl nie koreluje silnie z ogólną inteligencją (g), więc nie licz na to, że trening rozumowania poprawi jakość prozy czy formatowania i odwrotnie.
 
 **Uwaga / Anty-wzorzec:**
-Optymalizowanie pod styl (np. 'ładne pisanie', ton, forma) jako główny sygnał treningowy nie podnosi ogólnej zdolności rozumowania — styl nie jest silnie skorelowany z czynnikiem g (general intelligence). Trenowanie wyłącznie na danych stylistycznych daje model, który dobrze 'brzmi', ale słabo rozumuje i słabo transferuje.
-
-> **Cytat:** *"We see that logically structured training signal (both in pretraining and in RL) generalizes reasoning. First models pretrained on coding got better at ≈all tasks, R1 was RL'd for mafs&coding and became a vastly better writer than V3. but style, it seems, is not very g-loaded"*
-
----
-
-## Trening modeli / Inżynieria danych
-
-### Temporalna dysagregacja jako źródło ground truth do treningu modeli predykcyjnych
-
-- **Data:** `Mon Sep 21 23:11:47 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102173977879757153)
-- **Rodzaj:** Komentarz w dyskusji (@hesipullfade)
-- **Powiązane pojęcia:** [[Harness|Self-supervised learning]] [[Harness|Temporalna dysagregacja]] [[Eval Set z realnych sesji|Ground truth]] [[Harness|Szeregi czasowe]] [[Harness|Masked modeling]] [[Harness|Ekstrapolacja vs interpolacja]] [[Harness|Distribution shift]]
-
-**Kontekst / Problem:**
-Dyskusja dotyczy zarzutu, że nie da się wytrenować modelu prognozującego przyszłość, bo nie istnieje ground truth dla zdarzeń, które jeszcze nie nastąpiły. Autor odpowiada, że ground truth dla danych historycznych istnieje — jest tylko temporalnie rozproszony (temporally disaggregated), czyli rozbity na mniejsze przedziały czasowe i częściowo pominięty w danych wejściowych. Problem sprowadza się więc do zadania rekonstrukcji brakujących obserwacji historycznych.
-
-**Rada inżynierska:**
-Traktuj prognozowanie przyszłości jako zadanie rekonstrukcji pominiętych danych historycznych. Jeśli model potrafi odtworzyć usunięte/maskowane fragmenty przeszłego szeregu czasowego (dla których ground truth faktycznie posiadasz), to nabywa tę samą umiejętność ekstrapolacji potrzebną do przewidywania przyszłości. Praktycznie: buduj zbiory treningowe przez celowe maskowanie, agregowanie lub usuwanie okien czasowych z danych historycznych i ucz model ich odtworzenia — to daje niemal nieograniczony, samo-nadzorowany sygnał treningowy bez konieczności czekania na przyszłe etykiety.
-
-**Uwaga / Anty-wzorzec:**
-Błędne założenie, że brak etykiet dla przyszłości uniemożliwia trening predykcyjny. Anty-wzorzec: zbieranie danych wyłącznie w układzie 'cecha teraz → cel w przyszłości' i rezygnacja z ogromnego korpusu historycznego, który można przekonwertować na zadania rekonstrukcji. Uwaga jednak: ekstrapolacja w przyszłość obciążona jest przesunięciem rozkładu (non-stationarity), którego rekonstrukcja przeszłości nie ujawnia w pełni.
+Błąd projektowy: oczekiwanie, że poprawa jednego wymiaru (rozumowanie z RL na kodzie/matmie) automatycznie podniesie wszystkie wymiary, w tym styl. Styl okazuje się słabo 'g-loaded' — nie transferuje się razem z logiką. Odwrotnie, trening wyłącznie na zadaniach stylistycznych nie uogólni rozumowania. Nie mieszaj tych dwóch osi w jednym punkcie pomiaru.
 
 **⚡ Kwestia sporna / do rozstrzygnięcia:**
-Autor przeciwstawia się rozpowszechnionemu przekonaniu, że prognozowanie przyszłości jest fundamentalnie trudniejsze od modelowania danych historycznych z powodu braku ground truth. Twierdzi, że to 'actually easy', ponieważ ground truth dla przeszłości istnieje w formie temporalnie rozproszonej. Sporne pozostaje, czy rekonstrukcja pominiętych danych historycznych rzeczywiście uczy ekstrapolacji w warunkach niestacjonarności i zmiany reżimu — krytycy wskazują, że inter-/ekstrapolacja to nie to samo zadanie.
+Teza podważa dwa popularne przekonania branżowe: (1) że RL jest wąski i domenowo ograniczony — autor pokazuje szeroki transfer z matematyki/kodu na pisanie; (2) że wszystkie zdolności modelu są ze sobą skorelowane (jeden czynnik g) — autor twierdzi, że styl jest słabo g-loaded i nie transferuje razem z rozumowaniem. Do rozstrzygnięcia: czy obserwowany transfer R1 (math/coding RL → lepszy writer niż V3) wynika z generalizacji rozumowania, czy z efektów ubocznych treningu (np. zmiany dystrybucji, RLHF, długości CoT), które przypadkowo poprawiają styl.
 
-> **Cytat:** *"@hesipullfade @phl43 you have ground truth for those, just temporally disaggregated
-this is actually easy. If it can learn to predict omitted historical data, it learns to predict future data"*
+> **Cytat:** *"@phl43 We see that logically structured training signal (both in pretraining and in RL) generalizes reasoning. First models pretrained on coding got better at ≈all tasks, R1 was RL'd for mafs&coding and became a vastly better writer than V3. but style, it seems, is not very g-loaded"*
 
 ---
 
-## Prompt Architecture / Inżynieria promptów
+## Inżynieria promptów / Systemy agentowe
 
-### Podejście rubryka + przykłady + bootstrap przy pracy z LLM
+### Praca z agentami LLM: rubryki, przykłady i stopniowy bootstrap
 
 - **Data:** `Mon Sep 21 23:06:12 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102172573517701416)
 - **Rodzaj:** Komentarz w dyskusji (@teortaxesTex)
-- **Powiązane pojęcia:** [[Prompt Architecture]] [[Harness|Rubryki oceny]] [[Harness|Few-shot prompting]] [[Context Compaction|Bootstrap kontekstu]] [[Context Compaction|Inżynieria kontekstu]]
+- **Powiązane pojęcia:** [[Prompt Architecture|Prompt Engineering]] [[Harness|Agent harness]] [[Harness|Rubryki oceny]] [[Harness|Bootstrap agenta]] [[Context Compaction|Inżynieria kontekstu]]
 
 **Kontekst / Problem:**
-Autor odpowiada na pytanie innego użytkownika, czy da się zrealizować jakieś zadanie przy pomocy modeli LLM (potocznie 'clankers'). Odpowiedź brzmi: tak, ale wymaga to dostarczenia modelowi rubryk oceny, przykładów oraz stopniowego prowadzenia przez proces (bootstrap). Autor zaznacza, że takie podejście jest czasochłonne ('slow going').
+Odpowiedź na pytanie innego użytkownika, czy modele/agenci LLM (slangowo 'clankers') nadają się do wykonania jakiegoś zadania. Autor potwierdza, że tak, ale wymaga to dostarczenia rubryk oceny, przykładów oraz stopniowego bootstrapowania, a cały proces jest powolny.
 
 **Rada inżynierska:**
-Aby skutecznie wymusić na modelu LLM wykonanie złożonego zadania, należy: (1) dostarczyć rubryki (jawne kryteria oceny/sukcesu), (2) podać przykłady wzorcowe (few-shot), (3) prowadzić model krok po kroku w trybie bootstrap, budując kontekst inkrementalnie. Nie jest to jednak szybka ścieżka — proces jest żmudny i wymaga iteracji.
+Przy pracy z agentami LLM dostarczaj im jawne rubryki oceny, konkretne przykłady oraz prowadź je krok po kroku przez bootstrap zadania. Nie oczekuj, że模型 samodzielnie odgadnie kryteria sukcesu — inżynieria kontekstu i stopniowe wprowadzanie są kluczowe, choć spowalniają pracę.
 
 **Uwaga / Anty-wzorzec:**
-Oczekiwanie, że model samodzielnie wykona złożone zadanie bez rubryk, przykładów i stopniowego prowadzenia. Brak cierpliwości do iteracyjnego bootstrapu prowadzi do porzucenia podejścia mimo jego skuteczności.
+Brak rubryk, przykładów i stopniowego bootstrapu prowadzi do nieefektywnej pracy agenta; jednocześnie założenie, że proces będzie szybki, jest błędne — to żmudne i powolne zajęcie.
 
-> **Cytat:** *"btw the answer is "yes, with clankers damn it, you give them rubrics, examples, and bootstrap step by step" but it's a slow going"*
+> **Cytat:** *"@phl43 btw the answer is "yes, with clankers damn it, you give them rubrics, examples, and bootstrap step by step"
+but it's a slow going"*
 
 ---
 
-## Ewaluacja modeli i weryfikacja
+## Benchmarking i weryfikacja / sygnały treningowe
 
-### Brak ground truth blokuje rzetelną ocenę online; weryfikowalność domen kluczem do ewaluacji
+### Brak ground truth jako bariera scoringu: weryfikowalność domeny decyduje o możliwości treningu
 
 - **Data:** `Mon Sep 21 23:05:13 +0000 2026` | **Źródło:** [Post na X](https://x.com/teortaxesTex/status/2102172327232385279)
 - **Rodzaj:** Komentarz w dyskusji (@phl43)
-- **Powiązane pojęcia:** [[Eval Set z realnych sesji|Ground truth]] [[Harness|LLM-as-judge]] [[Harness|Ewaluacja modeli]] [[Harness|Weryfikacja formalna]] [[Harness|Lean]] [[Harness|Testy jednostkowe]] [[Stabilność modeli i przestrzeganie promptu|Benchmarking]]
+- **Powiązane pojęcia:** [[Eval Set z realnych sesji|Ground truth]] [[Harness|Weryfikowalne nagrody (verifiable rewards)]] [[Harness|LLM-as-a-Judge]] [[Harness|Reward hacking]] [[Weryfikator|Lean jako weryfikator dowodów]] [[Harness|Testy jednostkowe jako sygnał treningowy]] [[Weryfikator|Zewnętrzny weryfikator]]
 
 **Kontekst / Problem:**
-Dyskusja dotyczy oceny wyników modeli w zadaniach online/open-ended. Autor wskazuje, że próby naprawy problemu są punktowe i nie stanowią priorytetu, ponieważ brakuje ground truth. W domenach z automatyczną weryfikacją (testy kodu, natychmiastowe sprawdzanie obliczeń, Lean dla matematyki) ocena jest wykonalna; w zadaniach otwartych pozostaje problem, a użycie LLM jako sędziego („clankers”) jest wątpliwe.
+Dyskusja dotyczy oceniania (scoringu) wyników modeli w domenach otwartych, gdzie nie istnieje obiektywna prawda odniesienia (ground truth). Autor zestawia domeny łatwo weryfikowalne — kod (testy), obliczenia (natychmiastowe sprawdzenie wyniku), matematyka (Lean czyni dowody weryfikowalnymi) — z domenami, w których scoring jest fundamentalnie trudny. Odpowiedź sugeruje, że podejmowano punktowe próby naprawy tego problemu, ale nie są one priorytetem, bo sam problem jest trudny z natury, a nie z braku wysiłku.
 
 **Rada inżynierska:**
-Projektuj ewaluację w oparciu o weryfikowalne sygnały: testy jednostkowe, natychmiastowe sprawdzanie obliczeń, formalne dowody (Lean). Dla zadań bez ground truth nie używaj LLM-as-judge jako jedynego źródła prawdy; traktuj je jako heurystykę i jawnie oznaczaj niepewność oceny.
+Traktuj weryfikowalność domeny jako pierwszorzędne kryterium przy projektowaniu pętli treningowych i benchmarków: buduj sygnały nagrody tam, gdzie istnieje tani, deterministyczny i niezależny od modelu weryfikator (testy jednostkowe, sprawdzarka wyniku liczbowego, kompilator/Lean). W domenach bez ground truth nie da się 'naprawić' scoringu inżynierią promptu — brak prawdy odniesienia jest ograniczeniem strukturalnym, więc albo znajdź zewnętrzny, deterministyczny weryfikator, albo świadomie zaakceptuj niższą wiarygodność sygnału.
 
 **Uwaga / Anty-wzorzec:**
-Poleganie na LLM jako sędzim (LLM-as-judge) w zadaniach otwartych bez ground truth prowadzi do niezweryfikowanych, podatnych na halucynacje ocen. Brak ground truth uniemożliwia rzetelny scoring online i może maskować rzeczywiste błędy modelu.
+Ocenianie domen bez ground truth przy pomocy innych modeli ('clankers', LLM-as-a-Judge) jako substytutu prawdy odniesienia — prowadzi do zapętlenia oceny w modelu oceniającym, niespójnych sygnałów między uruchomieniami i podatności na reward hacking. Próby 'punktowej naprawy' takiego scoringu nie skalują się, bo brakuje niezależnego, obiektywnego punktu odniesienia.
 
-**⚡ Kwestia sporna / do rozstrzygnięcia:**
-Autor podważa powszechną praktykę używania LLM jako sędziów (LLM-as-judge) do oceny zadań otwartych, wskazując na brak ground truth i ryzyko niewiarygodnych ocen. Do rozstrzygnięcia: czy LLM-as-judge może być wystarczający przy braku weryfikowalnych sygnałów, czy konieczne są hybrydowe metody z formalną weryfikacją.
-
-> **Cytat:** *"@phl43 There have been attempts to fix this in a targeted fashion, but yes, not a priority, and it's genuinely hard because you don't have ground truth. Literally how do you score online? With clankers? Coding has tests, calculation has instant checking, Lean makes math verifiable."*
+> **Cytat:** *"There have been attempts to fix this in a targeted fashion, but yes, not a priority, and it's genuinely hard because you don't have ground truth. Literally how do you score online? With clankers? Coding has tests, calculation has instant checking, Lean makes math verifiable."*
 
 ---
