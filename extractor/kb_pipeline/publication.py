@@ -92,6 +92,17 @@ def validate_relative_note_path(relative_path: str) -> str:
             if base.endswith(" ") or base.endswith("."):
                 raise PublicationRejected(f"Filename stem '{base}' cannot end in space or dot")
 
+    filename = segments[-1]
+    if not filename.casefold().endswith(".md"):
+        raise PublicationRejected(
+            f"Destination filename must end with '.md' case-insensitively: '{relative_path}'"
+        )
+    stem_part = filename[:-3]
+    if not stem_part or stem_part.endswith(" ") or stem_part.endswith("."):
+        raise PublicationRejected(
+            f"Destination filename stem cannot be empty or end in dot or space: '{filename}'"
+        )
+
     top_dir = segments[0]
     if top_dir not in ALLOWLIST_DIRS:
         raise PublicationRejected(f"Path '{relative_path}' is outside allowlist directories")
@@ -107,7 +118,7 @@ def _is_symlink_or_junction(path: Path) -> bool:
     return False
 
 
-def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
+def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str, str]:
     if text.startswith("\ufeff"):
         text = text[1:]
 
@@ -133,11 +144,34 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     if not isinstance(data, dict):
         raise PublicationRejected("Frontmatter must parse to a mapping")
 
-    return data, body_text
+    return data, body_text, yaml_text
+
+
+def _validate_frontmatter_kb_managed(yaml_text: str, data: dict[str, Any]) -> None:
+    kb_val = data.get("kb_managed")
+    if not isinstance(kb_val, bool) or kb_val is not True:
+        raise PublicationRejected("Frontmatter kb_managed must be boolean True")
+
+    try:
+        node = yaml.compose(yaml_text, Loader=yaml.SafeLoader)
+    except yaml.YAMLError as exc:
+        raise PublicationRejected(f"Invalid YAML in frontmatter: {exc}")
+
+    if isinstance(node, yaml.MappingNode):
+        for k_node, v_node in node.value:
+            if isinstance(k_node, yaml.ScalarNode) and k_node.value == "kb_managed":
+                if (
+                    not isinstance(v_node, yaml.ScalarNode)
+                    or v_node.tag != "tag:yaml.org,2002:bool"
+                    or v_node.value.lower() != "true"
+                ):
+                    raise PublicationRejected(
+                        "Frontmatter kb_managed must be boolean True (cannot be string or YAML yes/on)"
+                    )
 
 
 def _validate_proposed_content(patch: NotePatch) -> None:
-    data, body = _parse_frontmatter(patch.proposed_content)
+    data, body, yaml_text = _parse_frontmatter(patch.proposed_content)
 
     if not body.strip():
         raise PublicationRejected("Body after frontmatter must contain non-whitespace text")
@@ -148,9 +182,7 @@ def _validate_proposed_content(patch: NotePatch) -> None:
             f"note_id mismatch: frontmatter has {front_note_id!r}, patch has {patch.note_id!r}"
         )
 
-    kb_val = data.get("kb_managed")
-    if kb_val is not True and not (isinstance(kb_val, str) and kb_val.lower() == "true"):
-        raise PublicationRejected("Frontmatter kb_managed must be true")
+    _validate_frontmatter_kb_managed(yaml_text, data)
 
     claim_ids = data.get("claim_ids")
     if not isinstance(claim_ids, list):
@@ -286,11 +318,8 @@ def plan_publication(
             except UnicodeDecodeError:
                 raise PublicationRejected(f"Existing file '{rel_path}' is not valid UTF-8")
 
-            existing_data, _ = _parse_frontmatter(current_text)
-
-            existing_kb = existing_data.get("kb_managed")
-            if existing_kb is not True and not (isinstance(existing_kb, str) and existing_kb.lower() == "true"):
-                raise PublicationRejected(f"Existing file '{rel_path}' is not kb_managed")
+            existing_data, _, existing_yaml = _parse_frontmatter(current_text)
+            _validate_frontmatter_kb_managed(existing_yaml, existing_data)
 
             existing_note_id = existing_data.get("note_id")
             if existing_note_id is not None and str(existing_note_id) != str(patch.note_id):

@@ -796,3 +796,124 @@ def test_claim_ids_coverage_rejected(tmp_path):
     )
     with pytest.raises(PublicationRejected):
         plan_publication([patch], vault)
+
+
+def test_non_md_suffix_rejected(tmp_path):
+    vault = _make_vault(tmp_path)
+    valid_content = (
+        "---\n"
+        "note_id: test-1\n"
+        "kb_managed: true\n"
+        "claim_ids:\n"
+        "  - c1\n"
+        "---\n"
+        "Body text.\n"
+    )
+
+    invalid_suffixes = [
+        "Pojęcia/payload.txt",
+        "Pojęcia/payload.py",
+        "Pojęcia/payload.json",
+        "Pojęcia/payload.md.txt",
+        "Pojęcia/payload",
+        "Pojęcia/.md",
+        "Procesy/script.sh",
+        "Narzędzia/config.yaml",
+        "Zasady/document.pdf",
+    ]
+
+    for path in invalid_suffixes:
+        with pytest.raises(PublicationRejected):
+            validate_relative_note_path(path)
+
+        patch = NotePatch(
+            note_id="test-1",
+            relative_path=path,
+            claim_ids=["c1"],
+            base_hash=None,
+            proposed_content=valid_content,
+        )
+        with pytest.raises(PublicationRejected):
+            plan_publication([patch], vault)
+
+    # Valid md suffixes case-insensitively
+    assert validate_relative_note_path("Pojęcia/note.md") == "Pojęcia/note.md"
+    assert validate_relative_note_path("Pojęcia/note.MD") == "Pojęcia/note.MD"
+    assert validate_relative_note_path("Pojęcia/note.Md") == "Pojęcia/note.Md"
+
+
+def test_kb_managed_boolean_required(tmp_path):
+    vault = _make_vault(tmp_path)
+
+    # Non-boolean or alias values that must be rejected
+    rejected_kb_values = [
+        '"true"',
+        "'true'",
+        "yes",
+        "Yes",
+        "YES",
+        "on",
+        "On",
+        "ON",
+        "1",
+        "0",
+        "false",
+        "False",
+        "off",
+    ]
+
+    for val in rejected_kb_values:
+        content = (
+            f"---\n"
+            f"note_id: test-kb\n"
+            f"kb_managed: {val}\n"
+            f"claim_ids:\n"
+            f"  - c1\n"
+            f"---\n"
+            f"Body text for kb_managed {val}.\n"
+        )
+        patch = NotePatch(
+            note_id="test-kb",
+            relative_path="Pojęcia/TestKB.md",
+            claim_ids=["c1"],
+            base_hash=None,
+            proposed_content=content,
+        )
+        with pytest.raises(PublicationRejected):
+            plan_publication([patch], vault)
+
+    # Also test replace over existing note having rejected kb_managed values
+    valid_proposed = (
+        "---\n"
+        "note_id: test-exist\n"
+        "kb_managed: true\n"
+        "claim_ids:\n"
+        "  - c1\n"
+        "---\n"
+        "Proposed valid text.\n"
+    )
+
+    for val in ['"true"', "yes", "on"]:
+        exist_file = vault / "Pojęcia" / f"Exist_{val.strip('\"')}.md"
+        exist_file.write_text(
+            f"---\n"
+            f"note_id: test-exist\n"
+            f"kb_managed: {val}\n"
+            f"claim_ids:\n"
+            f"  - c1\n"
+            f"---\n"
+            f"Existing note body.\n",
+            encoding="utf-8",
+        )
+        h = _hash_file(exist_file)
+
+        patch_replace = NotePatch(
+            note_id="test-exist",
+            relative_path=f"Pojęcia/Exist_{val.strip('\"')}.md",
+            claim_ids=["c1"],
+            base_hash=h,
+            proposed_content=valid_proposed,
+        )
+        with pytest.raises(PublicationRejected):
+            plan_publication([patch_replace], vault)
+
