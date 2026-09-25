@@ -1021,3 +1021,117 @@ def test_write_artifacts_workspace_symlink_alias_inside_vault(tmp_path, monkeypa
     with pytest.raises(ValueError, match="outside the vault"):
         write_integration_artifacts(workspace, vault, decisions)
 
+
+def test_advisor_duplicate_becomes_defer_when_supported_and_quote_absent():
+    quote_text = "Unique quote text absent from vault"
+    claim = make_claim(claim_id="c-dup-advisor", quote=quote_text)
+    verif = make_verification(claim_id="c-dup-advisor", relation=VerificationRelation.supports)
+    existing_note = make_note(
+        note_id="other-note",
+        content="Completely different note content without the quote.",
+    )
+    advice = IntegrationAdvice(
+        operation=IntegrationOperation.duplicate,
+        rationale="Advisor considers claim a conceptual duplicate",
+        conflicting_claim_ids=["prior:claim:55"],
+    )
+    advisor = Mock(return_value=advice)
+
+    decisions = integrate_claims(
+        [claim],
+        [verif],
+        {},
+        {existing_note.note_id: existing_note},
+        advisor,
+    )
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision.operation == IntegrationOperation.defer
+    assert decision.patch is None
+    assert decision.conflicting_claim_ids == []
+    assert decision.rationale == "Advisor considers claim a conceptual duplicate"
+
+
+def test_create_rejected_outside_allowed_directories():
+    quote_text = "Quote for directory test"
+    claim = make_claim(claim_id="c-zrodla", quote=quote_text)
+    verif = make_verification(claim_id="c-zrodla")
+    advice = IntegrationAdvice(
+        operation=IntegrationOperation.create,
+        relative_path="Źródła/note.md",
+        rationale="Attempted creation in Źródła",
+        proposed_body=f"Body with {quote_text}",
+    )
+    advisor = Mock(return_value=advice)
+
+    decisions = integrate_claims([claim], [verif], {}, {}, advisor)
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision.operation == IntegrationOperation.defer
+    assert decision.patch is None
+
+
+def test_create_rejected_without_md_extension():
+    quote_text = "Quote for extension test"
+    claim = make_claim(claim_id="c-txt", quote=quote_text)
+    verif = make_verification(claim_id="c-txt")
+    advice = IntegrationAdvice(
+        operation=IntegrationOperation.create,
+        relative_path="Pojęcia/note.txt",
+        rationale="Attempted creation with .txt",
+        proposed_body=f"Body with {quote_text}",
+    )
+    advisor = Mock(return_value=advice)
+
+    decisions = integrate_claims([claim], [verif], {}, {}, advisor)
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision.operation == IntegrationOperation.defer
+    assert decision.patch is None
+
+
+def test_create_rejected_windows_reserved_device_name():
+    quote_text = "Quote for reserved name test"
+    claim = make_claim(claim_id="c-con", quote=quote_text)
+    verif = make_verification(claim_id="c-con")
+    advice = IntegrationAdvice(
+        operation=IntegrationOperation.create,
+        relative_path="Pojęcia/CON.md",
+        rationale="Attempted creation with CON device name",
+        proposed_body=f"Body with {quote_text}",
+    )
+    advisor = Mock(return_value=advice)
+
+    decisions = integrate_claims([claim], [verif], {}, {}, advisor)
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision.operation == IntegrationOperation.defer
+    assert decision.patch is None
+
+
+@pytest.mark.parametrize("folder", ["Pojęcia", "Procesy", "Narzędzia", "Zasady"])
+def test_create_allowed_in_standard_directories(folder):
+    quote_text = f"Quote for standard folder {folder}"
+    claim = make_claim(claim_id=f"c-{folder}", quote=quote_text)
+    verif = make_verification(claim_id=f"c-{folder}")
+    advice = IntegrationAdvice(
+        operation=IntegrationOperation.create,
+        relative_path=f"{folder}/note.md",
+        rationale=f"Creation in {folder}",
+        proposed_body=f"Body with {quote_text}",
+    )
+    advisor = Mock(return_value=advice)
+
+    decisions = integrate_claims([claim], [verif], {}, {}, advisor)
+
+    assert len(decisions) == 1
+    decision = decisions[0]
+    assert decision.operation == IntegrationOperation.create
+    assert decision.patch is not None
+    assert decision.patch.relative_path == f"{folder}/note.md"
+
+

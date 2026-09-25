@@ -39,6 +39,14 @@ EXACT_FORBIDDEN_KEYS = frozenset({
     "token",
 })
 
+ALLOWED_CREATE_DIRS = frozenset({"Pojęcia", "Procesy", "Narzędzia", "Zasady"})
+
+WINDOWS_RESERVED_NAMES = frozenset({
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+})
+
 
 class NoteView(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -117,6 +125,25 @@ def _is_safe_relative_path(path_str: str | None) -> bool:
     norm = os.path.normpath(path_str)
     if norm.startswith("..") or os.path.isabs(norm):
         return False
+    return True
+
+
+def _is_valid_create_path(path_str: str | None) -> bool:
+    if not _is_safe_relative_path(path_str):
+        return False
+    if not path_str or not path_str.endswith(".md"):
+        return False
+    p = Path(path_str)
+    parts = p.parts
+    if len(parts) < 2:
+        return False
+    if parts[0] not in ALLOWED_CREATE_DIRS:
+        return False
+    for part in parts:
+        stem = Path(part).stem.upper()
+        base = part.split(".")[0].upper()
+        if stem in WINDOWS_RESERVED_NAMES or base in WINDOWS_RESERVED_NAMES:
+            return False
     return True
 
 
@@ -387,6 +414,23 @@ def integrate_claims(
             )
             continue
 
+        if advice.operation in (
+            IntegrationOperation.duplicate,
+            IntegrationOperation.record_conflict,
+            IntegrationOperation.defer,
+        ):
+            decisions.append(
+                IntegrationDecision(
+                    operation=IntegrationOperation.defer,
+                    claim_ids=[claim.claim_id],
+                    candidate_note_ids=candidate_note_ids,
+                    rationale=advice.rationale,
+                    patch=None,
+                    conflicting_claim_ids=[],
+                )
+            )
+            continue
+
         if not advice.proposed_body or not advice.proposed_body.strip():
             decisions.append(
                 IntegrationDecision(
@@ -433,13 +477,13 @@ def integrate_claims(
             else:
                 rel_path = advice.relative_path.strip()
 
-            if not _is_safe_relative_path(rel_path):
+            if not _is_valid_create_path(rel_path):
                 decisions.append(
                     IntegrationDecision(
                         operation=IntegrationOperation.defer,
                         claim_ids=[claim.claim_id],
                         candidate_note_ids=candidate_note_ids,
-                        rationale=f"Unsafe relative path '{rel_path}'",
+                        rationale=f"Invalid or unsafe create relative path '{rel_path}'",
                         patch=None,
                         conflicting_claim_ids=[],
                     )
@@ -584,12 +628,12 @@ def integrate_claims(
         else:
             decisions.append(
                 IntegrationDecision(
-                    operation=advice.operation,
+                    operation=IntegrationOperation.defer,
                     claim_ids=[claim.claim_id],
                     candidate_note_ids=candidate_note_ids,
                     rationale=advice.rationale,
                     patch=None,
-                    conflicting_claim_ids=advice.conflicting_claim_ids,
+                    conflicting_claim_ids=[],
                 )
             )
 
