@@ -196,7 +196,7 @@ def test_exhausted_retries_raise_semantic_checker_error():
     assert str(exc_info.value.__cause__) == "Second failure"
 
 
-def test_supports_relation_sets_flags_and_clears_metadata():
+def test_supports_relation_sets_flags_and_records_metadata():
     sources = {"x:100": make_source()}
     claim = make_claim()
 
@@ -215,8 +215,8 @@ def test_supports_relation_sets_flags_and_clears_metadata():
     assert result.source_supported is True
     assert result.independently_validated is False
     assert result.reason == "Direct support found"
-    assert result.model is None
-    assert result.prompt_version is None
+    assert result.model == "eval-model"
+    assert result.prompt_version == "v1"
     assert result.response_ref is None
     assert result.evidence == claim.evidence
 
@@ -242,8 +242,8 @@ def test_contradicts_relation_sets_flags():
     assert result.source_supported is False
     assert result.independently_validated is False
     assert result.reason == "Direct contradiction found"
-    assert result.model is None
-    assert result.prompt_version is None
+    assert result.model == "eval-model"
+    assert result.prompt_version == "v1"
     assert result.response_ref is None
     assert result.evidence == claim.evidence
 
@@ -295,4 +295,7 @@ def test_default_arguments_execution():
     assert result.relation is VerificationRelation.supports
     assert result.source_supported is True
     assert result.independently_validated is False
+    assert result.model is None
+    assert result.prompt_version is None
+    assert result.response_ref is None
     assert checker.call_count == 1

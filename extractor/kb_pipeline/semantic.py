@@ -62,7 +62,7 @@ def assess_claim(
         independently_validated=False,
         reason=reason,
         evidence=claim.evidence,
-        model=None,
-        prompt_version=None,
+        model=model,
+        prompt_version=prompt_version,
         response_ref=None,
     )
