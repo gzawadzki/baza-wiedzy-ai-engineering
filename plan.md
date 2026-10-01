@@ -1,5 +1,16 @@
 # Plan przebudowy pipeline’u wiedzy AI Engineering
 
+## Kontrakt przebiegu wskazany przez użytkownika
+
+To jest docelowa kolejność runtime, nadrzędna wobec starszych opisów etapów:
+
+1. Pobieranie wpisów z podanego okresu dla kont X/Twittera.
+2. Tekst wpisu i dostępny wątek, gdy wpis jest komentarzem. Załączone obrazy są ignorowane: bez pobierania, bez OCR i bez alt-tekstu. Lokalna bramka odrzuca pusty wpis, sam link i samą reakcję, potem pyta lokalny CLM (`http://127.0.0.1:8700/v1/systemone`, model `clm-latest`) tylko o tekst autora. Kod odrzuca przy `focus_claim` poniżej 0,30 albo `promotion` co najmniej 0,75. Reszta idzie do Jev. Brak rodzica zostaje brakiem. Kategoria też jest pytaniem CLM i jest wstrzymywana, gdy pewność spadnie poniżej 0,50.
+3. Kategoryzacja wpisu do jednej z kategorii: Pojęcia, Procesy, Narzędzia, Zasady.
+4. Ekstrakcja i podsumowanie modelem OpenRouter `stealth/space-bunny-alpha` (alias `openrouter/space-bunny`). Cytat musi pochodzić z dostarczonego tekstu.
+
+Wejście: `python -m kb_pipeline run --since YYYY-MM-DD --until YYYY-MM-DD --workspace <poza-vault>`. Publikacja do vaulta tylko z `--publish --vault ..`. `extract_kunchen_tips.py` używa tego samego przebiegu; `--legacy` zostawia stary filtr.
+
 > Status: specyfikacja do implementacji, nie raport z wykonania.
 > Odbiorcy: koordynator i agenci wykonawczy delegowani przez gemini-swarm.
 > Nie wymaga znajomości poprzedniej rozmowy. Mechanizm wywoływania gemini-swarm nie był analizowany — użyj istniejącej konfiguracji użytkownika, nie wymyślaj jego API.
