@@ -898,3 +898,83 @@ def test_published_at_is_never_replaced_with_today(tmp_path: Path):
         (Path(result["run_dir"]) / "artifacts" / "source_record.json").read_text(encoding="utf-8")
     )
     assert record["record"]["published_at"].startswith("2026-10-01T09:00:00")
+
+
+def test_handles_filter_strict_and_rejects_unmatched(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "alice_raw_tweets.json").write_text(
+        json.dumps(
+            [{"id": "7001", "username": "alice", "full_text": USEFUL_TEXT}],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (cache_dir / "bob_raw_tweets.json").write_text(
+        json.dumps(
+            [{"id": "7002", "username": "bob", "full_text": USEFUL_TEXT}],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    res = _run(None, vault, workspace, cache_dir=cache_dir, handles=["alice"])
+    assert res["status"] == "ok"
+    assert res["sources"] == ["x:7001"]
+
+    with pytest.raises(ValueError, match="No cache input matched handles"):
+        _run(None, vault, workspace, cache_dir=cache_dir, handles=["charlie"])
+
+
+def test_multi_source_batch_produces_independent_artifacts_and_manifests(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "multi_sources_raw_tweets.json").write_text(
+        json.dumps(
+            [
+                {
+                    "id": "8001",
+                    "username": "alice",
+                    "full_text": USEFUL_TEXT,
+                    "created_at": "Thu Oct 01 09:00:00 +0000 2026",
+                },
+                {
+                    "id": "8002",
+                    "username": "bob",
+                    "full_text": "Fail-fast wymaga logowania błędu.",
+                    "created_at": "Thu Oct 01 10:00:00 +0000 2026",
+                },
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = _run(cache_dir / "multi_sources_raw_tweets.json", vault, workspace)
+    assert result["status"] == "ok"
+    assert len(result["runs"]) == 2
+    run0 = result["runs"][0]
+    run1 = result["runs"][1]
+    assert run0["source_id"] == "x:8001"
+    assert run1["source_id"] == "x:8002"
+    assert run0["run_id"] != run1["run_id"], "each source must have its own run_id"
+    assert run0["run_dir"] != run1["run_dir"], "each source must have its own run_dir"
+
+    dir0 = Path(run0["run_dir"])
+    dir1 = Path(run1["run_dir"])
+    assert dir0.exists() and dir1.exists()
+
+    rec0 = json.loads((dir0 / "artifacts" / "source_record.json").read_text(encoding="utf-8"))
+    rec1 = json.loads((dir1 / "artifacts" / "source_record.json").read_text(encoding="utf-8"))
+    assert rec0["record"]["source_id"] == "x:8001"
+    assert rec1["record"]["source_id"] == "x:8002"
+
+    with StageCache(workspace) as cache_store:
+        m0 = cache_store.load_manifest(run0["run_id"])
+        m1 = cache_store.load_manifest(run1["run_id"])
+        assert m0 is not None and m0.run_id == run0["run_id"]
+        assert m1 is not None and m1.run_id == run1["run_id"]
+

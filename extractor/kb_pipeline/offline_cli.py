@@ -63,7 +63,11 @@ def run_offline(
     if handles:
         wanted = {handle.lstrip("@") for handle in handles}
         filtered = [path for path in inputs if path.stem.removesuffix("_raw_tweets") in wanted]
-        inputs = filtered or inputs
+        if not filtered:
+            raise ValueError(
+                f"No cache input matched handles: {', '.join(sorted(wanted))}"
+            )
+        inputs = filtered
 
     imported: dict[str, dict[str, int]] = {}
     with SourceStore(workspace_path) as store:
@@ -89,6 +93,16 @@ def run_offline(
         ).hexdigest()[:16]
         run_id = f"offline-flow-{identity}"
 
+        def _run_id_for(source_id: str) -> str:
+            ident = hashlib.sha256(
+                json.dumps(
+                    {"sources": [source_id], "vault": str(vault_path), "code": "offline-flow-v1"},
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            ).hexdigest()[:16]
+            return f"offline-flow-{ident}"
+
         def lookup(source_id: str, _store=store):
             return _store.get_deterministic(source_id)
 
@@ -99,7 +113,7 @@ def run_offline(
                 vault=vault_path,
                 workspace=workspace_path,
                 providers=providers,
-                run_id=run_id,
+                run_id=_run_id_for(record.source_id),
                 thresholds=limits,
             )
             for record in (lookup(source_id) for source_id in selected)
@@ -129,6 +143,8 @@ def run_offline(
         "runs": [
             {
                 "source_id": result["source_id"],
+                "run_id": result["run_id"],
+                "run_dir": result["run_dir"],
                 "status": result["status"],
                 "reason": result["reason"],
                 "stages": result["stages"],
