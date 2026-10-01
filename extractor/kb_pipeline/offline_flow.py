@@ -19,6 +19,7 @@ built in the workspace, ``plan_publication`` diff) and never patched.
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 import os
 from dataclasses import dataclass, field, replace
@@ -303,16 +304,14 @@ def _focus_gate(record: SourceRecord) -> tuple[str, str] | None:
 
 
 def _frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    if not text.startswith("---\n"):
-        return {}, text
-    end = text.find("\n---", 3)
-    if end == -1:
+    match = re.match(r"---\r?\n(.*?)\r?\n---(?=\r?\n|$)", text, re.DOTALL)
+    if match is None:
         return {}, text
     try:
-        data = yaml.safe_load(text[4:end]) or {}
+        data = yaml.safe_load(match.group(1)) or {}
     except yaml.YAMLError:
         return {}, text
-    return (data if isinstance(data, dict) else {}), text[end + 4 :]
+    return (data if isinstance(data, dict) else {}), text[match.end():]
 
 
 def load_managed_notes(vault: Path) -> dict[str, NoteView]:
