@@ -30,6 +30,7 @@ Vault gromadzi trwałą wiedzę o projektowaniu systemów AI. Notatki powinny by
 
 ### Metryki, Ewaluacja i Modele
 
+- [[Cookbook treningu małego modelu]] — kanoniczny plik: [COOKBOOK.md](COOKBOOK.md), cel 26M
 - [[Rework Rate]]
 - [[Eval Set z realnych sesji]]
 - [[Selektywna weryfikacja kodu]]
