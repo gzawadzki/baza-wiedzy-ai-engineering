@@ -21,3 +21,9 @@ state/
 config/
 .herdr-*
 nul
+
+# Test caches
+.pytest_cache/
+
+# Obsidian workspace noise
+Untitled.canvas
