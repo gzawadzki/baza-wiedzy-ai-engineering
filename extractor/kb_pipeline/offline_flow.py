@@ -528,7 +528,6 @@ def run_offline_flow(
             },
         )
         stages["context"] = StageRecord(status=StageStatus.completed, artifact_refs=[context_ref])
-        stages["clm_gate"] = StageRecord(status=StageStatus.pending)
 
         # ---------------- stage 3: local gate (code, no provider) ----------------
         screened = _focus_gate(bundle.focus)
@@ -537,13 +536,20 @@ def run_offline_flow(
             stages["local_gate"] = StageRecord(
                 status=StageStatus.rejected if status == "reject" else StageStatus.deferred,
                 error=None,
-                artifact_refs=[context_ref],
+                artifact_refs=["artifacts/gate_decisions.json"],
             )
             _write_json(
                 artifact_dir / "gate_decisions.json",
                 {"local_gate": {"status": status, "reason": reason}, "provider": provider_note},
             )
             return finish(status, reason)
+        stages["local_gate"] = StageRecord(
+            status=StageStatus.completed, artifact_refs=["artifacts/gate_decisions.json"]
+        )
+        _write_json(
+            artifact_dir / "gate_decisions.json",
+            {"local_gate": {"status": "passed"}, "provider": provider_note},
+        )
 
         # ---------------- stage 4: CLM on author text ----------------
         try:
@@ -689,8 +695,8 @@ def run_offline_flow(
             (claim.claim_id, evidence.quote)
             for claim in claims
             for evidence in claim.evidence
-            if evidence.source_id == bundle.focus.source_id
-            and not _quote_in_text(evidence.quote, bundle.focus.text)
+            if evidence.source_id != bundle.focus.source_id
+            or not _quote_in_text(evidence.quote, bundle.focus.text)
         ]
         if foreign_quotes:
             stages["claim_extraction"] = StageRecord(
@@ -809,11 +815,13 @@ def run_offline_flow(
         try:
             indexed = reindex(vault_path, index)
             notes = load_managed_notes(vault_path)
-            candidates: list[SectionCandidate] = []
-            for claim in eligible:
-                found = search(index, claim.text)
-                candidates.extend(_to_candidates(found))
-            decisions = integrate_claims(eligible, results, candidates, notes, cached_advisor)
+            candidates_by_claim = {
+                claim.claim_id: _to_candidates(search(index, claim.text))
+                for claim in eligible
+            }
+            decisions = integrate_claims(
+                eligible, results, candidates_by_claim, notes, cached_advisor
+            )
         except Exception as exc:  # noqa: BLE001
             stage_error("integration", str(exc))
             return finish("error", f"integration_failed: {exc}")

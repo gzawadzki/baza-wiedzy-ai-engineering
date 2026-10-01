@@ -126,6 +126,7 @@ def test_single_run_reaches_proposed_section_and_plan(tmp_path: Path):
     run = result["runs"][0]
     assert run["status"] == "extract", run
     assert run["stages"]["context"] == "completed"
+    assert run["stages"]["local_gate"] == "completed"
     assert run["stages"]["publication_plan"] == "completed"
     assert run["patch_count"] >= 1
 
@@ -164,6 +165,7 @@ def test_manifest_is_durable_and_reloadable(tmp_path: Path):
         (Path(result["run_dir"]) / "manifest.json").read_text(encoding="utf-8")
     )
     assert manifest.code_version == "offline-flow-v1"
+    assert manifest.stages["local_gate"].status is StageStatus.completed
     assert manifest.stages["verification"].status is StageStatus.completed
     assert manifest.publication_plan_ref == "artifacts/publication_plan.json"
     with StageCache(workspace) as cache_store:
@@ -443,6 +445,176 @@ def test_quote_from_parent_text_is_rejected(tmp_path: Path):
     assert run["status"] == "reject", run
     assert run["reason"] == "quote_not_in_author_text"
     assert result["patches"] == []
+
+
+def test_claim_quoting_foreign_source_id_rejected(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "parent_raw_tweets.json").write_text(
+        json.dumps(
+            [
+                {
+                    "id": "3001",
+                    "username": "alice",
+                    "full_text": "Rodzic mówi o awarii usługi i kosztach.",
+                },
+                {
+                    "id": "3002",
+                    "username": "bob",
+                    "full_text": "To prawda, zgadzam się z przedmówcą całkowicie.",
+                    "in_reply_to_status_id": "3001",
+                },
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    providers = fake_providers()
+
+    def foreign_id_claims(bundle, category=None):
+        return [
+            Claim(
+                claim_id="x3002-c1",
+                source_ids=[bundle.focus.source_id, "x:3001"],
+                text="Awaria usługi kosztowała zespół fortunę.",
+                kind="observation",
+                evidence=[
+                    {
+                        "source_id": "x:3001",
+                        "quote": "Rodzic mówi o awarii usługi i kosztach.",
+                    }
+                ],
+            )
+        ]
+
+    result = _run(
+        cache_dir / "parent_raw_tweets.json",
+        vault,
+        workspace,
+        source_ids=["x:3002"],
+        providers=FlowProviders(
+            mode="fake-offline",
+            local_filter=providers.local_filter,
+            categorize=providers.categorize,
+            jev_evaluate=providers.jev_evaluate,
+            extract_claims=lambda bundle, category=None: foreign_id_claims(bundle),
+            advisor=providers.advisor,
+            semantic_check=providers.semantic_check,
+            model_versions=providers.model_versions,
+        ),
+    )
+
+    run = result["runs"][0]
+    assert run["status"] == "reject", run
+    assert run["reason"] == "quote_not_in_author_text"
+    assert result["patches"] == []
+
+
+def test_local_gate_rejection_omits_clm_gate_stage(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    workspace = tmp_path / "workspace"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "reaction_raw_tweets.json").write_text(
+        json.dumps(
+            [
+                {"id": "5001", "username": "u", "full_text": "Dzięki!"},
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    result = _run(cache_dir / "reaction_raw_tweets.json", vault, workspace)
+    run = result["runs"][0]
+    assert run["status"] == "reject"
+    assert run["reason"] == "reaction_only"
+    assert run["stages"]["local_gate"] == "rejected"
+    assert "clm_gate" not in run["stages"]
+
+
+def test_integration_candidates_scoped_per_claim(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    (vault / "Pojęcia" / "Postmortem.md").write_text(
+        "---\n"
+        "note_id: kb-postmortem\n"
+        "kb_managed: true\n"
+        "claim_ids: []\n"
+        "---\n\n"
+        "# Postmortem\n\n"
+        "## Kultura blameless\n\n"
+        "Retrospektywy blameless pozwalają na otwartą analizę incydentów.\n",
+        encoding="utf-8",
+    )
+    workspace = tmp_path / "workspace"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    text = (
+        "Fail-fast redukuje czas diagnozy problemu. "
+        "Kultura blameless to klucz do sukcesu zespołu."
+    )
+    (cache_dir / "multi_raw_tweets.json").write_text(
+        json.dumps([{"id": "6001", "username": "u", "full_text": text}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    providers = fake_providers()
+    seen_candidates: dict[str, list[str]] = {}
+
+    def tracking_advisor(claim, candidates, notes):
+        seen_candidates[claim.claim_id] = [c.note_id for c in candidates]
+        return providers.advisor(claim, candidates, notes)
+
+    def two_claims(bundle, category=None):
+        return [
+            Claim(
+                claim_id="c1",
+                source_ids=[bundle.focus.source_id],
+                text="prompt regresję od szumu",
+                kind="recommendation",
+                evidence=[
+                    {
+                        "source_id": bundle.focus.source_id,
+                        "quote": "Fail-fast redukuje czas diagnozy problemu.",
+                    }
+                ],
+            ),
+            Claim(
+                claim_id="c2",
+                source_ids=[bundle.focus.source_id],
+                text="blameless analizę incydentów",
+                kind="recommendation",
+                evidence=[
+                    {
+                        "source_id": bundle.focus.source_id,
+                        "quote": "Kultura blameless to klucz do sukcesu zespołu.",
+                    }
+                ],
+            ),
+        ]
+
+    result = _run(
+        cache_dir / "multi_raw_tweets.json",
+        vault,
+        workspace,
+        providers=FlowProviders(
+            mode="fake-offline",
+            local_filter=providers.local_filter,
+            categorize=providers.categorize,
+            jev_evaluate=providers.jev_evaluate,
+            extract_claims=lambda b, c=None: two_claims(b),
+            advisor=tracking_advisor,
+            semantic_check=providers.semantic_check,
+            model_versions=providers.model_versions,
+        ),
+    )
+    assert result["status"] == "ok"
+    assert "c1" in seen_candidates and "c2" in seen_candidates
+    assert "kb-fail-fast" in seen_candidates["c1"]
+    assert "kb-postmortem" not in seen_candidates["c1"]
+    assert "kb-postmortem" in seen_candidates["c2"]
+    assert "kb-fail-fast" not in seen_candidates["c2"]
 
 
 def test_parent_context_is_separated_from_focus_text(tmp_path: Path):
