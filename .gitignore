@@ -19,3 +19,22 @@ extractor/*_raw_tweets.json
 logs/
 state/logs/
 
+
+# Agent/swarm runtime (herdr)
+.herdr-claims-run/
+.herdr-swarm/
+
+# Windows reserved-name junk
+nul
+
+# Raw tweet caches (anywhere)
+*_raw_tweets.json
+
+# Test caches
+.pytest_cache/
+
+# Runtime state/cache (sqlite sources DB, logs, extension markers)
+state/
+
+# Obsidian workspace noise
+Untitled.canvas
