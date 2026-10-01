@@ -490,6 +490,7 @@ def run_offline_flow(
         if replayed:
             value = payload["value"]
             origin = "cache"
+            usage.record_replay(stage)
         else:
             # Pre-call enforcement: the run stops here rather than spending.
             flow_budget.before_call(stage)
@@ -558,7 +559,7 @@ def run_offline_flow(
             },
             stages=stages,
             token_count=usage_payload["totals"]["tokens"].get("total"),
-            cost=usage_payload["totals"]["cost"].get("total"),
+            cost=usage_payload["totals"]["cost"].get("value"),
             duration_seconds=usage_payload["totals"]["duration_seconds"],
             publication_plan_ref=stages.get("publication_plan").artifact_refs[0]
             if stages.get("publication_plan")

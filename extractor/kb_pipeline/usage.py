@@ -222,6 +222,7 @@ class FlowBudget:
     _charged: int = field(default=0, init=False)
     _unmeasured: int = field(default=0, init=False)
     _max_call_tokens: int = field(default=0, init=False)
+    _has_measurement: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
         for name, value in (("max_attempts", self.max_attempts), ("max_tokens", self.max_tokens)):
@@ -239,7 +240,7 @@ class FlowBudget:
     @property
     def measured_tokens(self) -> int | None:
         """Tokens a provider actually reported, or ``None`` while nothing was."""
-        return self._measured if self._measured or self._max_call_tokens else None
+        return self._measured if self._has_measurement else None
 
     def reservation(self) -> int:
         """Tokens reserved for the next call: the largest call measured so far."""
@@ -253,7 +254,7 @@ class FlowBudget:
             )
         if self.max_tokens is not None:
             reserved = self._max_call_tokens
-            if self._attempts and not reserved:
+            if self._attempts and not self._has_measurement:
                 # One call was allowed to obtain a measurement. If the provider
                 # still reports nothing, a token limit cannot be enforced, so the
                 # run stops instead of pretending the limit holds.
@@ -275,12 +276,13 @@ class FlowBudget:
         self._attempts += 1
         measured = sanitize_usage(usage)
         if measured is None:
-            if self._max_call_tokens:
+            if self._has_measurement:
                 # Charged the largest measured call. This narrows the limit; it
                 # does not prove what the call cost.
                 self._charged += self._max_call_tokens
                 self._unmeasured += 1
             return
+        self._has_measurement = True
         spent = int(measured.get("input_tokens", 0)) + int(measured.get("output_tokens", 0))
         self._measured += spent
         self._charged += spent
@@ -294,15 +296,15 @@ class FlowBudget:
             "tokens_measured": (
                 self.measured_tokens if self.measured_tokens is not None else NOT_MEASURED
             ),
-            "tokens_charged": self._charged if self._measured or self._max_call_tokens else NOT_MEASURED,
+            "tokens_charged": self._charged if self._has_measurement else NOT_MEASURED,
             "unmeasured_calls": self._unmeasured,
             "reservation_tokens": (
-                self.reservation() if self._max_call_tokens else NOT_MEASURED
+                self.reservation() if self._has_measurement else NOT_MEASURED
             ),
             "reservation_basis": (
                 "largest measured call so far; not a bound on what an unmeasured "
                 "call costs"
-                if self._max_call_tokens
+                if self._has_measurement
                 else "not measurable: no provider reported token usage yet"
             ),
             "enforcement": "checked before each provider call; a breach stops the run",

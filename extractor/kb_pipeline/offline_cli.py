@@ -68,7 +68,9 @@ def _derive_source_run_id(source_id: str, vault: Path) -> str:
     return f"offline-flow-{identity}"
 
 
-def _write_run_usage_manifest(run_dir: Path, results: list[dict[str, Any]]) -> dict[str, Any]:
+def _write_run_usage_manifest(
+    run_dir: Path, results: list[dict[str, Any]], *, write_artifacts: bool = True
+) -> dict[str, Any]:
     """Aggregate the per-source usage ledgers of one invocation into the run."""
     payloads: list[Mapping[str, Any]] = []
     for result in results:
@@ -80,6 +82,8 @@ def _write_run_usage_manifest(run_dir: Path, results: list[dict[str, Any]]) -> d
         except (OSError, ValueError):
             continue
     payload = summarise(payloads)
+    if not write_artifacts:
+        return payload
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "usage_manifest.json").write_bytes(
         (json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(
@@ -152,8 +156,10 @@ def _run_report(
     totals = _aggregate(results, providers, run_id)
     # The batch artifacts describe the invocation; each source keeps its own
     # run directory with its own summary, manifest and usage.
+    source_dirs = {Path(result["run_dir"]) for result in results}
     batch = Path(batch_dir) if batch_dir is not None else Path(run_dir)
-    usage = _write_run_usage_manifest(batch, results)
+    write_batch = batch not in source_dirs
+    usage = _write_run_usage_manifest(batch, results, write_artifacts=write_batch)
     report = {
         "status": "ok",
         "mode": "offline",
@@ -200,12 +206,13 @@ def _run_report(
     }
     # The batch summary sits with the batch; the per-source ones stay with their
     # source, so a two-source run keeps both.
-    (batch / "summary.json").write_bytes(
-        (
-            json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False)
-            + "\n"
-        ).encode("utf-8")
-    )
+    if write_batch:
+        (batch / "summary.json").write_bytes(
+            (
+                json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False)
+                + "\n"
+            ).encode("utf-8")
+        )
     return report
 
 
@@ -220,7 +227,6 @@ def run_offline(
     limit: int,
     providers: FlowProviders,
     thresholds: Mapping[str, float] | None = None,
-    run_id: str | None = None,
     max_attempts: int | None = None,
     max_tokens: int | None = None,
 ) -> dict[str, Any]:
@@ -268,10 +274,10 @@ def run_offline(
         if not selected:
             raise ValueError("No source records matched the selection")
 
-        batch_run_id = run_id or _derive_run_id(selected, vault_path, providers)
+        batch_run_id = _derive_run_id(selected, vault_path, providers)
         batch_state = RunState(workspace_path, batch_run_id)
         source_runs = {
-            source_id: run_id if run_id else _derive_source_run_id(source_id, vault_path)
+            source_id: _derive_source_run_id(source_id, vault_path)
             for source_id in selected
         }
         descriptor = {
@@ -400,11 +406,18 @@ def resume_offline(
             for source_run in sorted(set(run_ids.values()) | {run_id})
         }
 
+    batch_run_id = descriptor.get("batch_run_id")
+    batch_dir = (
+        RunState(workspace_path, batch_run_id).run_dir
+        if batch_run_id and batch_run_id != run_id
+        else state.run_dir
+    )
     return _run_report(
         results=results,
         providers=run_providers,
         run_id=run_id,
-        run_dir=state.run_dir,
+        run_dir=Path(results[0]["run_dir"]) if results else state.run_dir,
+        batch_dir=batch_dir,
         vault=vault_path,
         extra={
             "resumed": True,

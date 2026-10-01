@@ -286,32 +286,48 @@ class ClaimIdentityRegistry:
         source_revisions = {source_id: content_hash}
         body = identity_body(provider_claim)
         matched = sorted(self._candidates_for(provider_claim))
+        body_matches = [
+            cid
+            for cid in matched
+            if (stored := self._stored_identity(self._data["claims"][cid])) is not None
+            and _digest(stored) == _digest(body)
+        ]
+
+        if len(body_matches) == 1:
+            matched_id = body_matches[0]
+            existing = self._data["claims"][matched_id]
+            previous = int(existing["current_revision"])
+            revision = self._record_revision(
+                matched_id,
+                provider_claim,
+                source_revisions,
+                run_id=run_id,
+                body=revision_body(provider_claim),
+            )
+            return IdentityAssignment(
+                claim=provider_claim.model_copy(update={"claim_id": matched_id}),
+                provider_claim_id=provider_claim.claim_id,
+                status="unchanged" if revision == previous else "revision",
+                reason=(
+                    "same claim, same wording: the recorded revision is replayed"
+                    if revision == previous
+                    else "same claim, material conditions/limitations changed: "
+                    "new revision of the same claim id"
+                ),
+                matched_claim_id=matched_id,
+                revision=revision,
+            )
+
+        if len(body_matches) > 1:
+            return self._new_unresolved(
+                provider_claim,
+                source_revisions=source_revisions,
+                run_id=run_id,
+                candidates=body_matches,
+                reason="ambiguous_evidence_key: the same evidence maps to several claims",
+            )
 
         if len(matched) == 1:
-            existing = self._data["claims"][matched[0]]
-            stored = self._stored_identity(existing)
-            if stored is not None and _digest(stored) == _digest(body):
-                previous = int(existing["current_revision"])
-                revision = self._record_revision(
-                    matched[0],
-                    provider_claim,
-                    source_revisions,
-                    run_id=run_id,
-                    body=revision_body(provider_claim),
-                )
-                return IdentityAssignment(
-                    claim=provider_claim.model_copy(update={"claim_id": matched[0]}),
-                    provider_claim_id=provider_claim.claim_id,
-                    status="unchanged" if revision == previous else "revision",
-                    reason=(
-                        "same claim, same wording: the recorded revision is replayed"
-                        if revision == previous
-                        else "same claim, material conditions/limitations changed: "
-                        "new revision of the same claim id"
-                    ),
-                    matched_claim_id=matched[0],
-                    revision=revision,
-                )
             # Same evidence, different meaning fields: unresolved on purpose.
             return self._new_unresolved(
                 provider_claim,

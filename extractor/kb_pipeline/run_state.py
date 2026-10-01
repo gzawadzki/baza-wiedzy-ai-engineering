@@ -309,7 +309,6 @@ class RunState:
             "run_id": self.run_id,
             "run_dir": str(self.run_dir),
             "descriptor_present": self.descriptor_path.is_file(),
-            "sources": sorted(self._checkpoints),
             "sources": {
                 source_id: {
                     stage: {

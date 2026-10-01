@@ -36,6 +36,7 @@ from kb_pipeline.identity import (
 )
 from kb_pipeline.offline_cli import resume_offline, run_offline
 from kb_pipeline.offline_flow import FlowProviders, fake_providers, run_offline_flow
+from kb_pipeline.run_state import RunState
 from kb_pipeline.schemas import Claim, Evidence, SourceRecord
 from kb_pipeline.stage_cache import StageCache
 from kb_pipeline.storage import SourceStore
@@ -1113,3 +1114,149 @@ def test_a_credential_shaped_provider_answer_is_never_persisted(tmp_path: Path):
     assert result["runs"][0]["status"] == "error", "a credential is an error, not a stored artifact"
     assert "sensitive" in result["runs"][0]["reason"]
     assert not list((workspace / "runs").glob("*/artifacts/raw/clm_gate.json"))
+
+
+def test_run_offline_cli_rejects_run_id_argument(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    cache = _cache(tmp_path)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "kb_pipeline",
+            "run",
+            "--offline",
+            "--run-id",
+            "custom-run-id",
+            "--offline-input",
+            str(cache),
+            "--vault",
+            str(vault),
+            "--workspace",
+            str(tmp_path / "workspace"),
+        ],
+        cwd=EXTRACTOR,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "unrecognized arguments: --run-id" in result.stderr
+
+
+def test_single_source_isolates_batch_and_source_summaries_on_run_and_resume(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    cache = _cache(tmp_path)
+    workspace = tmp_path / "workspace"
+    result = _run(cache, vault, workspace)
+    source_dir = Path(result["runs"][0]["run_dir"])
+    batch_dir = Path(result["batch_run_dir"])
+    assert source_dir != batch_dir
+    assert result["batch_run_id"] != result["runs"][0]["run_id"]
+    source_summary = json.loads((source_dir / "summary.json").read_text(encoding="utf-8"))
+    assert source_summary["source_id"] == "x:1001"
+    batch_summary = json.loads((batch_dir / "summary.json").read_text(encoding="utf-8"))
+    assert "runs" in batch_summary
+    assert "source_id" not in batch_summary
+
+    resumed = resume_offline(
+        workspace=workspace, run_id=result["runs"][0]["run_id"], vault=vault
+    )
+    assert resumed["status"] == "ok"
+    reloaded_source_summary = json.loads((source_dir / "summary.json").read_text(encoding="utf-8"))
+    assert reloaded_source_summary["source_id"] == "x:1001"
+
+
+def test_run_manifest_records_measured_cost_from_provider(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    cache = _cache(tmp_path)
+    workspace = tmp_path / "workspace"
+    base = fake_providers()
+    costly = FlowProviders(
+        mode="fake-offline",
+        local_filter=lambda text: {**base.local_filter(text), "cost": 0.015},
+        categorize=base.categorize,
+        jev_evaluate=base.jev_evaluate,
+        extract_claims=base.extract_claims,
+        semantic_check=base.semantic_check,
+        advisor=base.advisor,
+        model_versions=base.model_versions,
+    )
+    result = _run(cache, vault, workspace, providers=costly)
+    manifest = json.loads((Path(result["runs"][0]["run_dir"]) / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["cost"] == pytest.approx(0.015)
+
+
+def test_identity_registry_reuses_matching_candidate_when_multiple_candidates_exist(tmp_path: Path):
+    workspace = tmp_path / "workspace"
+    with ClaimIdentityRegistry(workspace) as registry:
+        first = registry.assign(
+            [_claim("x:1", "pierwsza teza", "cytat", conditions=["a"])],
+            source_id="x:1",
+            content_hash="a" * 64,
+            run_id="run-1",
+        )
+        second = registry.assign(
+            [_claim("x:1", "druga teza z tego samego cytatu", "cytat", conditions=["b"])],
+            source_id="x:1",
+            content_hash="a" * 64,
+            run_id="run-2",
+        )
+    assert first[0].claim.claim_id != second[0].claim.claim_id
+    assert len(ClaimIdentityRegistry(workspace).claims()) == 2
+
+    with ClaimIdentityRegistry(workspace) as registry:
+        replay_first = registry.assign(
+            [_claim("x:1", "pierwsza teza", "cytat", conditions=["a"])],
+            source_id="x:1",
+            content_hash="a" * 64,
+            run_id="run-3",
+        )
+        replay_second = registry.assign(
+            [_claim("x:1", "druga teza z tego samego cytatu", "cytat", conditions=["b"])],
+            source_id="x:1",
+            content_hash="a" * 64,
+            run_id="run-4",
+        )
+    assert replay_first[0].claim.claim_id == first[0].claim.claim_id
+    assert replay_first[0].status == "unchanged"
+    assert replay_second[0].claim.claim_id == second[0].claim.claim_id
+    assert replay_second[0].status == "unchanged"
+    assert len(ClaimIdentityRegistry(workspace).claims()) == 2
+
+
+def test_stage_cache_hit_counts_replays_in_usage_ledger(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    cache = _cache(tmp_path)
+    workspace = tmp_path / "workspace"
+    first = _run(cache, vault, workspace)
+    assert first["provider_calls"] > 0
+    second = _run(cache, vault, workspace)
+    assert second["provider_replays"] > 0
+    assert second["usage"]["replays"] == second["provider_replays"]
+    run_usage = json.loads((Path(second["runs"][0]["run_dir"]) / "usage.json").read_text(encoding="utf-8"))
+    assert run_usage["totals"]["replays"] == second["provider_replays"]
+
+
+def test_run_state_report_sources_is_mapping(tmp_path: Path):
+    vault = _build_vault(tmp_path)
+    cache = _cache(tmp_path)
+    workspace = tmp_path / "workspace"
+    result = _run(cache, vault, workspace)
+    state = RunState(workspace, result["runs"][0]["run_id"])
+    report = state.report()
+    assert isinstance(report["sources"], dict)
+    assert "x:1001" in report["sources"]
+    assert "clm_gate" in report["sources"]["x:1001"]
+    assert report["sources"]["x:1001"]["clm_gate"]["status"] == "completed"
+
+
+def test_budget_distinguishes_measured_zero_tokens_from_unmeasured():
+    budget = FlowBudget(max_tokens=50)
+    budget.before_call("probe")
+    budget.after_call("probe", {"input_tokens": 0, "output_tokens": 0})
+    assert budget.measured_tokens == 0
+    budget.before_call("next_stage")
+    payload = budget.to_dict()
+    assert payload["tokens_measured"] == 0
+    assert payload["tokens_charged"] == 0
+    assert payload["reservation_tokens"] == 0

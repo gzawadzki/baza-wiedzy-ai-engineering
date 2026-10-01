@@ -98,11 +98,6 @@ def main():
         help="Ogranicz --offline do tych identyfikatorów x:<id> (powtarzalne)",
     )
     r.add_argument(
-        "--run-id",
-        default=None,
-        help="Jawny identyfikator przebiegu dla --offline (domyślnie wyliczany z wejścia)",
-    )
-    r.add_argument(
         "--max-attempts",
         type=int,
         default=None,
@@ -268,7 +263,6 @@ def main():
                     source_ids=args.source_id,
                     limit=args.limit,
                     providers=fake_providers(),
-                    run_id=args.run_id,
                     max_attempts=args.max_attempts,
                     max_tokens=args.max_tokens,
                 )
