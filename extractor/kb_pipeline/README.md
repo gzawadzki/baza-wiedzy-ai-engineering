@@ -1,6 +1,6 @@
 # Pipeline wiedzy — stan wdrożenia
 
-Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale CLI nadal nie publikuje: brak komend `run`, `resume` i `rollback`. Pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
+Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Pionowy przebieg offline end-to-end jest dostępny przez `run --offline`. Retrieval CLI udostępnia komendy `reindex` i `search`. Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale publikacja do vaulta pozostaje zablokowana (`run --publish` jest zablokowane); brak komend `resume` i `rollback`. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
 
 Uruchamiaj z katalogu `extractor/` po instalacji `pip install -r requirements.txt` (do uruchomienia testów dodatkowo `pip install pytest`). Ścieżki raportu, snapshotu i workspace muszą wskazywać poza vault:
 
@@ -200,9 +200,11 @@ python -m kb_pipeline run --offline --offline-input ../.. \
   jest odrzucana jako cudza (`quote_not_in_author_text`). Rodzic, cytat i watk zyjaja w
   `ContextBundle.related[]` z `role` i `provenance`, a `focus.text` to wylacznie tekst autora.
 - **Trwale artefakty i replay**: `workspace/runs/<run_id>/artifacts/*.json`, `proposed_section.md`,
-  `manifest.json`, `summary.json` oraz `RunManifest` w `StageCache`. Identyczny powtorzony
-  przebieg daje `provider_calls: 0` i te same `NotePatch`; `run_id` jest wyliczany z haszy
-  wejscia, wiec nie powstaja nowe katalogi ani puste diffy.
+  `manifest.json`, `summary.json` oraz `RunManifest` w `StageCache`. Dla każdego źródła
+  powstaje niezależny `run_id` wyliczany z jego identyfikatora i haszy, co izoluje artefakty
+  w przebiegach wsadowych. Identyczny powtórzony przebieg daje `provider_calls: 0` i te same
+  `NotePatch`. Filtr `--handles` wymaga dopasowania do plików cache (brak dopasowania kończy
+  się jawnym błędem).
 - **Poza zakresem tego trybu**: zapis do vaulta, cokolwiek w `Zrodla/`, migracja, embeddingi,
   harmonogram. `independently_validated` pozostaje `false`; wynik weryfikacji oznacza
   wylacznie "tekst zrodla wspiera teze w zakresie podanym przez zrodlo", nie prawdziwosc.
