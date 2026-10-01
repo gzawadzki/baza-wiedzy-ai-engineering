@@ -17,7 +17,10 @@ from .claim_extraction import extract_live_claims
 from .jev_provider import JevError
 from .live_adapters import configured_handles
 from .live_jev import evaluate_live_source
+from .offline_cli import run_offline
+from .offline_flow import fake_providers
 from .pilot import run_pilot
+from .search_cli import RetrievalError, reindex_vault, search_index
 from .storage import SourceStore
 
 
@@ -61,7 +64,11 @@ def main():
     c.add_argument("--source-id", type=str, required=True, help="X source ID (x:<numeric_id>)")
     c.add_argument("--content-hash", type=str, required=True, help="Content hash for the source revision")
     c.add_argument("--model", type=str, default="jev-latest", help="TypeSafe model identifier")
-    r = commands.add_parser("run", help="Pobierz okres, OCR i wątek, filtruj CLM+Jev, kategoryzuj, ekstrahuj")
+    r = commands.add_parser(
+        "run",
+        help="Pobierz okres, OCR i wątek, filtruj CLM+Jev, kategoryzuj, ekstrahuj "
+             "(--offline: pełny przebieg offline od cache do propozycji sekcji)",
+    )
     r.add_argument("--handles", default="", help="Konta X, rozdzielone przecinkami")
     r.add_argument("--since", default=None, help="Początek okresu YYYY-MM-DD, włącznie")
     r.add_argument("--until", default=None, help="Koniec okresu YYYY-MM-DD, wyłącznie")
@@ -71,11 +78,56 @@ def main():
     r.add_argument("--limit", type=int, default=80)
     r.add_argument("--cache-only", action="store_true")
     r.add_argument("--publish", action="store_true", help="Zapisz notatki do vault/Źródła")
+    r.add_argument(
+        "--offline",
+        action="store_true",
+        help="Pionowy przebieg offline: cache -> źródła -> kontekst -> bramki -> tezy -> "
+             "NotePatch -> plan publikacji (read-only, wstrzyknięci dostawcy fake)",
+    )
+    r.add_argument(
+        "--offline-input",
+        type=Path,
+        default=None,
+        help="Jawne wejście cache dla --offline: plik <handle>_raw_tweets.json "
+             "albo katalog takich plików (bez sieci)",
+    )
+    r.add_argument(
+        "--source-id",
+        action="append",
+        default=None,
+        help="Ogranicz --offline do tych identyfikatorów x:<id> (powtarzalne)",
+    )
     s = commands.add_parser("screen-cache", help="Lokalny CLM na pobranym cache, bez Jev i bez vaulta")
     s.add_argument("--cache-dir", type=Path, default=Path("."))
     s.add_argument("--workspace", type=Path, required=True)
     s.add_argument("--handles", default="")
     s.add_argument("--workers", type=int, default=4)
+    ri = commands.add_parser(
+        "reindex",
+        help="Rebuild the read-only section index from the vault into the workspace",
+    )
+    ri.add_argument("--vault", type=Path, required=True, help="Vault directory, read only")
+    ri.add_argument(
+        "--workspace", type=Path, required=True, help="Operational state outside the vault"
+    )
+    se = commands.add_parser("search", help="Query the workspace index; never writes to the vault")
+    se.add_argument("query", help="Search phrase, e.g. \"kompaktowanie kontekstu\"")
+    se.add_argument(
+        "--workspace", type=Path, required=True, help="Workspace holding the retrieval index"
+    )
+    se.add_argument("--format", choices=("json",), default="json", help="Output format (json)")
+    se.add_argument("--limit", type=int, default=10, help="Maximum number of results (1-100)")
+    se.add_argument(
+        "--include-sources",
+        action="store_true",
+        help="Also return sections from the Źródła/ evidence layer",
+    )
+    se.add_argument(
+        "--vault",
+        type=Path,
+        default=None,
+        help="Optional vault directory, resolved read-only and echoed in the output",
+    )
     args = parser.parse_args()
     if args.command == "audit":
         result = audit(args.vault)
@@ -163,6 +215,31 @@ def main():
             }, ensure_ascii=False))
             raise SystemExit(2)
         handles = [part.strip().lstrip("@") for part in args.handles.split(",") if part.strip()] or None
+        if args.offline:
+            if args.vault is None:
+                print(json.dumps({
+                    "status": "error",
+                    "error": "run --offline wymaga --vault (używane tylko read-only).",
+                }, ensure_ascii=False))
+                raise SystemExit(1)
+            try:
+                result = run_offline(
+                    vault=args.vault,
+                    workspace=args.workspace,
+                    cache_input=args.offline_input,
+                    cache_dir=args.cache_dir,
+                    handles=handles,
+                    source_ids=args.source_id,
+                    limit=args.limit,
+                    providers=fake_providers(),
+                )
+            except (OSError, RuntimeError, ValueError) as exc:
+                print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
+                raise SystemExit(1) from None
+            print(json.dumps(result, ensure_ascii=False))
+            if result["counters"]["error"]:
+                raise SystemExit(1)
+            return
         publish_dir = None
         try:
             result = run_accounts(
@@ -179,6 +256,26 @@ def main():
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
             raise SystemExit(1) from None
         print(json.dumps({"status": "ok", "handles": {name: {key: value[key] for key in ("fetched", "in_period", "extracted", "rejected", "deferred", "errors")} for name, value in result["handles"].items()}}, ensure_ascii=False))
+    elif args.command == "reindex":
+        try:
+            result = reindex_vault(args.vault, args.workspace)
+        except RetrievalError as exc:
+            print(json.dumps(exc.payload(), ensure_ascii=False))
+            raise SystemExit(1) from None
+        print(json.dumps(result, ensure_ascii=False))
+    elif args.command == "search":
+        try:
+            result = search_index(
+                args.workspace,
+                args.query,
+                vault=args.vault,
+                include_sources=args.include_sources,
+                limit=args.limit,
+            )
+        except RetrievalError as exc:
+            print(json.dumps(exc.payload(), ensure_ascii=False))
+            raise SystemExit(1) from None
+        print(json.dumps(result, ensure_ascii=False))
     elif args.command == "verify-snapshot":
         errors = verify_snapshot(args.destination)
         print(json.dumps({"verified": not errors, "mismatches": errors}, ensure_ascii=False))

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Sequence
 
 from .schemas import ContextBundle, ContextItem, ContextStatus, SourceRecord
 
@@ -13,11 +13,22 @@ def build_context(
     *,
     max_depth: int = 3,
     max_items: int = 12,
+    provenance_for: Callable[[str], str] | None = None,
+    extra_missing_ids: Sequence[str] | None = None,
 ) -> ContextBundle:
-    """Assemble conversation context for a focus source record offline."""
+    """Assemble conversation context for a focus source record offline.
+
+    ``focus.text`` is the author's own text. Parents, thread ancestors, and quoted
+    posts live in ``related`` with their own role, author, and provenance; they are
+    never merged into the focus text. ``missing_ids`` holds known source ids whose
+    text could not be obtained, never guessed ids.
+    """
     related: list[ContextItem] = []
     missing_ids: list[str] = []
     visited_ids: set[str] = {focus.source_id}
+
+    def provenance(source_id: str) -> str:
+        return provenance_for(source_id) if provenance_for is not None else "cache:lookup"
 
     def record_missing(source_id: str) -> None:
         if source_id not in missing_ids:
@@ -45,7 +56,7 @@ def build_context(
         reply_path.add(record.source_id)
         reply_path.add(curr_reply_id)
         role = "parent" if depth == 1 else "thread"
-        related.append(ContextItem(source=record, role=role, provenance="cache:lookup"))
+        related.append(ContextItem(source=record, role=role, provenance=provenance(record.source_id)))
         curr_reply_id = record.reply_to_id
         depth += 1
 
@@ -70,9 +81,12 @@ def build_context(
         visited_ids.add(curr_quote_id)
         quote_path.add(record.source_id)
         quote_path.add(curr_quote_id)
-        related.append(ContextItem(source=record, role="quote", provenance="cache:lookup"))
+        related.append(ContextItem(source=record, role="quote", provenance=provenance(record.source_id)))
         curr_quote_id = record.quoted_source_id
         depth += 1
+
+    for known_id in extra_missing_ids or ():
+        record_missing(known_id)
 
     # Determine context status
     if not missing_ids:

@@ -103,3 +103,109 @@ python -m kb_pipeline claim-extract --vault .. --workspace ../../kb-workspace --
 - **Niezmienność vaulta (vault immutability)**: Polecenie nie tworzy ani nie modyfikuje żadnych notatek Obsidiana w vaultcie. Niezależna weryfikacja semantyczna oraz integracja/publikacja pozostają odroczone do kolejnych etapów.
 - **Idempotentne odtwarzanie (replay)**: Ponowne wywołanie z identycznymi parametrami korzysta z zapisanego stanu w `StageCache` (`cached: true`) i nie modyfikuje plików.
 
+
+## Retrieval w CLI (`reindex`, `search`)
+
+Existing retrieval (SQLite FTS5 over note sections) is now reachable from the CLI and is
+independent of the rest of the run. The vault is only ever read; the index always lives in the
+workspace, outside the vault. No models, no embeddings, no vector database: the tokenizer is the
+deterministic `unicode61` FTS5 tokenizer, so a Polish query with diacritics matches the same word
+typed without them, and English aliases match Polish content.
+
+```bash
+python -m kb_pipeline reindex --vault .. --workspace ../../kb-workspace
+python -m kb_pipeline search "kompaktowanie" --workspace ../../kb-workspace --format json
+python -m kb_pipeline search "\"bezpieczny punkt\"" --workspace ../../kb-workspace
+python -m kb_pipeline search "safe checkpoint" --workspace ../../kb-workspace --limit 5 --include-sources
+python -m kb_pipeline search "harness" --workspace ../../kb-workspace --vault ..
+```
+
+- `--workspace` is explicit and required for both commands; there is no hidden index in the current
+  directory. It points at the workspace directory, and the index is `<workspace>/retrieval/index.sqlite3`
+  with the metadata `<workspace>/retrieval/index-info.json`.
+- `reindex` writes only the workspace (`vault_writes: 0`). It never writes, moves, or deletes a
+  note, and it does not require `--apply`: indexing is not publication into the vault.
+- `search` is read-only. It opens the index read-only, touches neither the vault nor the workspace,
+  and its optional `--vault` selector is resolved and validated read-only and echoed in the output,
+  so a caller can label the index they searched.
+- `reindex` is idempotent: rebuilding from an unchanged vault yields the same `sections` count, the
+  same content `fingerprint` (SHA-256 over the indexed rows) and byte-identical JSON output. Note
+  ids fall back to a deterministic hash of the relative path, so a note without `note_id` keeps its
+  identity across rebuilds. A manual edit or a deleted note disappears from the index on the next
+  `reindex`.
+- JSON output is deterministic and structured. `search` prints `{"status", "command", "query",
+  "workspace", "index", "include_sources", "limit", "count", "results"}`; every result has exactly
+  `path`, `note_id`, `heading`, `anchor`, `snippet`, `score`, `status`. `reindex` prints `{"status",
+  "command", "vault", "workspace", "index", "sections", "fingerprint", "vault_writes"}`.
+- Errors are structured, with a stable `code` and a `hint` where a next step helps, and exit code 1:
+  `missing_workspace`, `missing_vault`, `invalid_workspace`, `invalid_vault`, `missing_index`
+  (hint: run `reindex`), `empty_query`, `invalid_limit` (1–100), `index_inside_vault`,
+  `index_write_failed`, `search_failed`. Nothing is written on an error path.
+- `--format` accepts `json` and defaults to `json`, so an agent always parses the same structure.
+- Query syntax stays the existing deterministic FTS5 one: separate words are combined with AND, a
+  double-quoted span is a phrase, and a trailing `*` is a prefix. Diacritics are folded, so
+  `"pojęcie"` and `"pojecie"` return the same hits; word forms are not stemmed, so
+  `"weryfikacja"` does not match `"weryfikacje"`.
+
+Tests: `python -m pytest -q tests/test_search_cli.py` (synthetic vault in `tmp_path`, offline).
+
+
+## Przebieg pionowy offline (`run --offline`)
+
+`run --offline` to jedna komenda end-to-end: cache -> `SourceStore` -> kontekst -> bramka
+lokalna -> CLM -> Jev -> kategoria -> ekstrakcja tez -> weryfikacja -> integracja ->
+`NotePatch` -> plan publikacji **read-only**. Vault jest w tym trybie tylko czytany.
+
+```bash
+# jawne wejscie cache: pojedynczy plik <handle>_raw_tweets.json
+python -m kb_pipeline run --offline \
+  --offline-input ../../DrJimFan_raw_tweets.json \
+  --vault .. --workspace ../../kb-workspace
+
+# katalog z plikami *_raw_tweets.json (jak dotad --cache-dir)
+python -m kb_pipeline run --offline --cache-dir ../.. \
+  --vault .. --workspace ../../kb-workspace
+
+# pojedynczy wpis (identyfikatory x:<id> sa powtarzalne)
+python -m kb_pipeline run --offline --offline-input ../.. \
+  --source-id x:123 --source-id x:456 \
+  --vault .. --workspace ../../kb-workspace
+```
+
+### Zasady, ograniczenia i granice trybu offline
+
+- **Dostawcy sa jawnie wstrzykiwani i zawsze oznaczeni**: `--offline` wybiera jawnie
+  `fake-offline` (`kb_pipeline.offline_flow.fake_providers`). Kazdy artefakt zawiera
+  `"provider": {"mode": ..., "fake": ...}`, a `summary.json` zapisuje `provider_mode`.
+  Podmiana dostawcy na zywy nie moze wystapicc niepostrzezenie: `FlowProviders.mode` jest
+  polem obowiazkowym, a wartosc inna niz `"fake-offline"`/`"live"` jest bledem. **Fake'i
+  opisuja zachowanie na fixture'ach, nie jakosc semantyczna i nie poprawnosc modeli.**
+- **Brak sieci i brak kluczy**: tryb offline nie pobiera z aktora i nie wywoluje zadnego
+  dostawcy HTTP. Cache jest jedynym zrodlem wpisow.
+- **`--vault` jest wymagane i uzywane read-only**: zapisuje sie wylacznie w workspace.
+  Plan publikacji powstaje przez `publication.plan_publication` i ma `mode: plan_only`,
+  `applied: false`; zawiera diff, ktorego **nie** wykonuje. `run --publish` nadal jest
+  odrzucane, takze w trybie offline, przed jakimkolwiek wywolaniem dostawcy.
+- **Rozdzielone liczniki `reject` / `defer` / `error`**: `reject` to ocena tresci (pusty
+  focus, sam link, sama reakcja, reklama, cytat spoza tekstu autora), `defer` to
+  niepewnosc (za malo kontekstu, kategoria ponizej pewnosci, `unsupported`), `error` to awaria
+  etapu lub dostawcy. Awaria dostawcy nigdy nie jest zapisywana jako `defer`.
+- **Progi w jednym miejscu, wartosci bez zmian**: `kb_pipeline/thresholds.py` (`DEFAULT_THRESHOLDS`)
+  przepisuje istniejace stale (`CLAIM_REJECT` 0.30, `PROMO_REJECT` 0.75,
+  `CATEGORY_CONFIDENCE` 0.50, Jev 0.70/0.60/0.20) i zapisuje je w `summary.json`
+  (z odciskiem i pochodzeniem kazdej wartosci). Progi **nie wchodza** do klucza cache:
+  zmiana progu przelicza decyzje z surowej odpowiedzi, bez ponownego wywolania dostawcy.
+  Progi sa progami operacyjnymi, nie gwarancja jakosci.
+- **Cytat musi pochodzic z tekstu autora**: tesa wskazujaca cytat rodzica lub cytowanego wpisu
+  jest odrzucana jako cudza (`quote_not_in_author_text`). Rodzic, cytat i watk zyjaja w
+  `ContextBundle.related[]` z `role` i `provenance`, a `focus.text` to wylacznie tekst autora.
+- **Trwale artefakty i replay**: `workspace/runs/<run_id>/artifacts/*.json`, `proposed_section.md`,
+  `manifest.json`, `summary.json` oraz `RunManifest` w `StageCache`. Identyczny powtorzony
+  przebieg daje `provider_calls: 0` i te same `NotePatch`; `run_id` jest wyliczany z haszy
+  wejscia, wiec nie powstaja nowe katalogi ani puste diffy.
+- **Poza zakresem tego trybu**: zapis do vaulta, cokolwiek w `Zrodla/`, migracja, embeddingi,
+  harmonogram. `independently_validated` pozostaje `false`; wynik weryfikacji oznacza
+  wylacznie "tekst zrodla wspiera teze w zakresie podanym przez zrodlo", nie prawdziwosc.
+
+Testy: `python -m pytest -q tests/test_offline_flow.py` (syntetyczny vault w `tmp_path`,
+offline, bez kluczy i bez sieci).

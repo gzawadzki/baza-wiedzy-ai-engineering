@@ -110,7 +110,9 @@ def test_filters_run_in_order_and_extraction_cannot_invent_a_quote():
         local_filter=local_filter, jev_evaluate=jev, categorize=categorize, summarize=summarize,
     )
     assert calls == ["clm", "jev", "category", ("summary", "Zasady")]
-    assert result.status == "defer"
+    # an invented quote is a content decision, not an uncertainty
+    assert result.status == "reject"
+    assert "nie występuje w tekście autora" in result.reason
     assert result.category == "Zasady"
 
     def grounded(document: str, category: str) -> dict:

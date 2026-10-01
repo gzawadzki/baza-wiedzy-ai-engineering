@@ -80,7 +80,12 @@ def category_question() -> dict[str, dict]:
     }
 
 
-def decide_clm(response: dict) -> tuple[str, str]:
+def decide_clm(
+    response: dict,
+    *,
+    focus_claim_reject: float = CLAIM_REJECT,
+    promotion_reject: float = PROMO_REJECT,
+) -> tuple[str, str]:
     """Code owns the threshold. CLM does not return keep or drop."""
     if not isinstance(response, dict):
         return "defer", "local_filter_invalid"
@@ -91,14 +96,14 @@ def decide_clm(response: dict) -> tuple[str, str]:
     promo = _noul(answers.get("promotion"))
     if claim is None or promo is None:
         return "defer", "local_filter_invalid"
-    if promo >= PROMO_REJECT:
+    if promo >= promotion_reject:
         return "reject", "promotion"
-    if claim < CLAIM_REJECT:
+    if claim < focus_claim_reject:
         return "reject", "low_focus_claim"
     return "keep", "clm_focus_claim"
 
 
-def category_from_clm(response: dict) -> str:
+def category_from_clm(response: dict, *, category_confidence: float = CATEGORY_CONFIDENCE) -> str:
     answers = response.get("answers") if isinstance(response, dict) else None
     answer = answers.get("category") if isinstance(answers, dict) else None
     if not isinstance(answer, dict) or answer.get("type") != "choice":
@@ -107,7 +112,7 @@ def category_from_clm(response: dict) -> str:
     confidence = answer.get("confidence")
     if choice not in CATEGORIES or isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
         raise ValueError("kategoria CLM jest niekompletna")
-    if float(confidence) < CATEGORY_CONFIDENCE:
+    if float(confidence) < category_confidence:
         raise ValueError("category_uncertain")
     return str(choice)
 
