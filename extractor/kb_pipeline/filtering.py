@@ -5,10 +5,14 @@ from __future__ import annotations
 import math
 
 from .schemas import ContextBundle, FilterAssessment, FilterDecision
+from .thresholds import DEFAULT_THRESHOLDS
 
-
-_LOW_USE_CONFIDENCE = 0.2
-_TOPIC_OPTIONS = frozenset({"compaction", "evals", "harness", "other"})
+# ``thresholds.DEFAULT_THRESHOLDS`` owns the value; this name stays as the
+# spelling used inside this module. Same number, one definition site.
+_LOW_USE_CONFIDENCE = DEFAULT_THRESHOLDS["jev_low_use"]
+# Single owner for the topic label set; ``jev_provider`` keeps the same set.
+TOPIC_OPTIONS = frozenset({"compaction", "evals", "harness", "other"})
+_TOPIC_OPTIONS = TOPIC_OPTIONS
 
 
 def _finite_probability(value: object, field: str) -> float:
@@ -64,6 +68,7 @@ def assess_filter(
     *,
     usefulness_threshold: float = 0.7,
     context_threshold: float = 0.6,
+    low_use_threshold: float = _LOW_USE_CONFIDENCE,
     question_version: str = "v1",
     policy_version: str = "v1",
     raw_response_ref: str | None = None,
@@ -72,6 +77,7 @@ def assess_filter(
         usefulness_threshold, "usefulness_threshold"
     )
     context_threshold = _finite_probability(context_threshold, "context_threshold")
+    low_use_threshold = _finite_probability(low_use_threshold, "low_use_threshold")
 
     if not isinstance(response, dict):
         raise ValueError("TypeSafe response must be an object")
@@ -98,7 +104,7 @@ def assess_filter(
     elif engineering_value >= usefulness_threshold:
         decision = FilterDecision.extract
         reason_code = "sufficient_value_and_context"
-    elif engineering_value <= _LOW_USE_CONFIDENCE:
+    elif engineering_value <= low_use_threshold:
         decision = FilterDecision.reject
         reason_code = "low_engineering_value"
     else:

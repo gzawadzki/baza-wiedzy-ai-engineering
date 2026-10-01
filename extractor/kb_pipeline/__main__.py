@@ -17,7 +17,7 @@ from .claim_extraction import extract_live_claims
 from .jev_provider import JevError
 from .live_adapters import configured_handles
 from .live_jev import evaluate_live_source
-from .offline_cli import run_offline
+from .offline_cli import resume_offline, run_offline
 from .offline_flow import fake_providers
 from .pilot import run_pilot
 from .search_cli import RetrievalError, reindex_vault, search_index
@@ -97,6 +97,42 @@ def main():
         default=None,
         help="Ogranicz --offline do tych identyfikatorów x:<id> (powtarzalne)",
     )
+    r.add_argument(
+        "--run-id",
+        default=None,
+        help="Jawny identyfikator przebiegu dla --offline (domyślnie wyliczany z wejścia)",
+    )
+    r.add_argument(
+        "--max-attempts",
+        type=int,
+        default=None,
+        help="Twardy limit wywołań dostawcy na przebieg; przekroczenie zatrzymuje przebieg",
+    )
+    r.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Twardy limit tokenów na przebieg, z rezerwacją na podstawie zmierzonych wywołań",
+    )
+    rs = commands.add_parser(
+        "resume",
+        help="Kontynuuj przerwany przebieg offline z jego własnych punktów kontrolnych",
+    )
+    rs.add_argument("--run-id", required=True, help="Identyfikator przebiegu do wznowienia")
+    rs.add_argument(
+        "--workspace",
+        type=Path,
+        required=True,
+        help="Workspace z punktami kontrolnymi tego przebiegu",
+    )
+    rs.add_argument(
+        "--vault",
+        type=Path,
+        default=None,
+        help="Vault używany read-only; domyślnie z deskryptora przebiegu",
+    )
+    rs.add_argument("--max-attempts", type=int, default=None)
+    rs.add_argument("--max-tokens", type=int, default=None)
     s = commands.add_parser("screen-cache", help="Lokalny CLM na pobranym cache, bez Jev i bez vaulta")
     s.add_argument("--cache-dir", type=Path, default=Path("."))
     s.add_argument("--workspace", type=Path, required=True)
@@ -232,12 +268,15 @@ def main():
                     source_ids=args.source_id,
                     limit=args.limit,
                     providers=fake_providers(),
+                    run_id=args.run_id,
+                    max_attempts=args.max_attempts,
+                    max_tokens=args.max_tokens,
                 )
             except (OSError, RuntimeError, ValueError) as exc:
                 print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
                 raise SystemExit(1) from None
             print(json.dumps(result, ensure_ascii=False))
-            if result["counters"]["error"]:
+            if result["counters"]["error"] or result.get("budget_stopped"):
                 raise SystemExit(1)
             return
         publish_dir = None
@@ -256,6 +295,21 @@ def main():
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
             raise SystemExit(1) from None
         print(json.dumps({"status": "ok", "handles": {name: {key: value[key] for key in ("fetched", "in_period", "extracted", "rejected", "deferred", "errors")} for name, value in result["handles"].items()}}, ensure_ascii=False))
+    elif args.command == "resume":
+        try:
+            result = resume_offline(
+                workspace=args.workspace,
+                run_id=args.run_id,
+                vault=args.vault,
+                max_attempts=args.max_attempts,
+                max_tokens=args.max_tokens,
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
+            raise SystemExit(1) from None
+        print(json.dumps(result, ensure_ascii=False))
+        if result["counters"]["error"] or result.get("budget_stopped"):
+            raise SystemExit(1)
     elif args.command == "reindex":
         try:
             result = reindex_vault(args.vault, args.workspace)

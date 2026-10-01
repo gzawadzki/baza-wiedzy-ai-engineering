@@ -10,6 +10,26 @@ from pathlib import Path
 from .schemas import RunManifest
 
 
+def assert_no_sensitive_fields(value: object) -> None:
+    """Refuse an artifact that carries credential-shaped fields.
+
+    Applied to everything the pipeline persists, including the raw provider
+    responses kept next to a run, so a live adapter cannot write a header or a
+    key into the workspace.
+    """
+    if isinstance(value, dict):
+        for name, nested in value.items():
+            if isinstance(name, str):
+                field = name.lower().replace("-", "_")
+                if (field in {"headers", "authorization", "cookie", "api_key", "password", "token"}
+                        or field.endswith("_token") or "credential" in field or "secret" in field):
+                    raise ValueError("artifact contains sensitive fields")
+            assert_no_sensitive_fields(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            assert_no_sensitive_fields(nested)
+
+
 class StageCache:
     def __init__(self, workspace: Path):
         self.workspace = workspace.resolve()
@@ -50,20 +70,7 @@ class StageCache:
         return json.loads(row[0]) if row else None
 
     def put(self, key: str, value: dict) -> None:
-        def check_fields(item: object) -> None:
-            if isinstance(item, dict):
-                for name, nested in item.items():
-                    if isinstance(name, str):
-                        field = name.lower().replace("-", "_")
-                        if (field in {"headers", "authorization", "cookie", "api_key", "password", "token"}
-                                or field.endswith("_token") or "credential" in field or "secret" in field):
-                            raise ValueError("artifact contains sensitive fields")
-                    check_fields(nested)
-            elif isinstance(item, list):
-                for nested in item:
-                    check_fields(nested)
-
-        check_fields(value)
+        assert_no_sensitive_fields(value)
         payload = json.dumps(value, ensure_ascii=False, allow_nan=False)
         with self.connection:
             self.connection.execute("""

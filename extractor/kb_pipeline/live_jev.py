@@ -50,7 +50,13 @@ def compute_policy_version_key(
     usefulness_threshold: float,
     context_threshold: float,
 ) -> str:
-    """Compute a deterministic key combining question version, policy version, and thresholds."""
+    """Fingerprint of a *decision*, not of a raw assessment.
+
+    It records which policy and which bars produced a decision, so the decision
+    is traceable. It is deliberately **not** part of any stage cache key: a
+    threshold or policy change recomputes the decision from the cached raw
+    answer instead of paying for a new provider call (plan §1.7).
+    """
     payload = {
         "question_version": question_version,
         "policy_version": policy_version,
@@ -169,10 +175,26 @@ def evaluate_live_source(
     context_hash = compute_context_hash(bundle)
 
     input_hash = compute_input_hash(record.source_id, source_hash)
-    policy_key = compute_policy_version_key(
+    # The raw assessment is keyed by what the model actually saw: stage, source
+    # input, context, model, question version, schema version. Neither the
+    # decision thresholds nor the policy version belong here, so changing a bar
+    # recomputes the decision from the cached answer instead of re-calling.
+    cache_key = StageCache.key("filter", input_hash, context_hash, model, question_version, schema_version=1)
+    decision_fingerprint = compute_policy_version_key(
         question_version, policy_version, usefulness_threshold, context_threshold
     )
-    cache_key = StageCache.key("filter", input_hash, context_hash, model, policy_key, schema_version=1)
+
+    def _decide(cached: dict) -> dict:
+        """Recompute the decision from a cached raw answer, under current bars."""
+        return assess_filter(
+            bundle,
+            {"model": cached.get("model", model), "answers": cached.get("answers", {})},
+            usefulness_threshold=usefulness_threshold,
+            context_threshold=context_threshold,
+            question_version=question_version,
+            policy_version=policy_version,
+            raw_response_ref=cached.get("raw_response_ref"),
+        )
 
     with StageCache(workspace_path) as cache:
         if not refresh:
@@ -184,11 +206,9 @@ def evaluate_live_source(
                 and cached.get("context_hash") == context_hash
                 and cached.get("model") == model
                 and cached.get("question_version") == question_version
-                and cached.get("policy_version") == policy_version
-                and cached.get("usefulness_threshold") == usefulness_threshold
-                and cached.get("context_threshold") == context_threshold
             ):
                 assessment_data = cached.get("assessment", {})
+                decision = _decide(cached)
                 return {
                     "status": "completed",
                     "source_id": record.source_id,
@@ -196,16 +216,19 @@ def evaluate_live_source(
                     "source_hash": source_hash,
                     "context_hash": context_hash,
                     "context_status": bundle.context_status.value,
-                    "decision": assessment_data.get("decision"),
-                    "reason_code": assessment_data.get("reason_code"),
-                    "engineering_score": assessment_data.get("engineering_score"),
-                    "topic": assessment_data.get("topic"),
-                    "probabilities": assessment_data.get("probabilities", {}),
-                    "model": cached.get("model", model),
-                    "question_version": cached.get("question_version", question_version),
-                    "policy_version": cached.get("policy_version", policy_version),
+                    "decision": decision.decision.value,
+                    "reason_code": decision.reason_code,
+                    "engineering_score": decision.engineering_score,
+                    "topic": decision.topic,
+                    "probabilities": decision.probabilities,
+                    "model": model,
+                    "question_version": question_version,
+                    "policy_version": policy_version,
+                    "decision_fingerprint": decision_fingerprint,
                     "usage": cached.get("usage", {}),
                     "cached": True,
+                    "decision_recomputed_from_cache": decision.model_dump(mode="json")
+                    != assessment_data,
                     "artifact_ref": cached.get("raw_response_ref"),
                 }
 
@@ -290,7 +313,9 @@ def evaluate_live_source(
             "model": model,
             "question_version": question_version,
             "policy_version": policy_version,
+            "decision_fingerprint": decision_fingerprint,
             "usage": sanitized_usage,
             "cached": False,
+            "decision_recomputed_from_cache": False,
             "artifact_ref": artifact_rel_ref,
         }

@@ -150,10 +150,10 @@ def test_evaluate_live_source_success(tmp_path):
     assert summary["usage"] == {"input_tokens": 320, "output_tokens": 42}
     assert _hash_tree(vault) == before_vault
 
-    # Check StageCache
+    # Check StageCache. The raw assessment key carries stage, input, context,
+    # model, question version and schema version - never a threshold.
     input_hash = compute_input_hash("x:100", source.content_hash)
-    policy_key = compute_policy_version_key("v1", "v1", 0.7, 0.6)
-    cache_key = StageCache.key("filter", input_hash, summary["context_hash"], "jev-latest", policy_key, schema_version=1)
+    cache_key = StageCache.key("filter", input_hash, summary["context_hash"], "jev-latest", "v1", schema_version=1)
     with StageCache(workspace) as cache:
         cached = cache.get(cache_key)
         assert cached is not None
@@ -668,7 +668,13 @@ def test_cache_collision_different_sources_same_content(tmp_path):
     assert replay2["decision"] == "reject"
 
 
-def test_cache_tracks_policy_and_threshold_changes(tmp_path):
+def test_threshold_and_policy_change_recompute_without_a_new_call(tmp_path):
+    """Plan §1.7: a bar change recomputes the decision, it does not re-ask the model.
+
+    This is the behaviour the previous contract got wrong: thresholds and the
+    policy version used to sit in the raw-assessment cache key, so moving a bar
+    threw the answer away and paid for it again.
+    """
     vault = make_vault(tmp_path)
     workspace = tmp_path / "workspace"
     source = make_source("x:100")
@@ -691,9 +697,10 @@ def test_cache_tracks_policy_and_threshold_changes(tmp_path):
     )
     assert transport.call_count == 1
     assert s1["decision"] == "extract"
+    fingerprint_1 = compute_policy_version_key("v1", "v1", 0.7, 0.6)
 
-    # Changed threshold to 0.85 -> 0.75 is below 0.85, decision should be defer (borderline)
-    # Must NOT return stale extract from cache!
+    # Changed threshold to 0.85 -> 0.75 is below 0.85, decision should be defer
+    # (borderline) - recomputed from the cached raw answer, no new call.
     s2 = evaluate_live_source(
         vault=vault,
         workspace=workspace,
@@ -703,10 +710,14 @@ def test_cache_tracks_policy_and_threshold_changes(tmp_path):
         api_key="test-key",
         transport=transport,
     )
-    assert transport.call_count == 2
+    assert transport.call_count == 1
+    assert s2["cached"] is True
     assert s2["decision"] == "defer"
+    assert s2["decision_recomputed_from_cache"] is True
+    assert s2["decision_fingerprint"] == compute_policy_version_key("v1", "v1", 0.85, 0.6)
+    assert fingerprint_1 != s2["decision_fingerprint"]
 
-    # Changed policy_version to "v2" -> must not reuse v1
+    # Changed policy_version -> still a decision change, still no new call
     s3 = evaluate_live_source(
         vault=vault,
         workspace=workspace,
@@ -716,8 +727,25 @@ def test_cache_tracks_policy_and_threshold_changes(tmp_path):
         api_key="test-key",
         transport=transport,
     )
-    assert transport.call_count == 3
+    assert transport.call_count == 1
+    assert s3["cached"] is True
+    assert s3["decision"] == "extract"
     assert s3["policy_version"] == "v2"
+    assert s3["decision_fingerprint"] == compute_policy_version_key("v1", "v2", 0.7, 0.6)
+
+    # Back to the original bars -> the original decision, still no new call
+    s4 = evaluate_live_source(
+        vault=vault,
+        workspace=workspace,
+        source_id="x:100",
+        policy_version="v1",
+        usefulness_threshold=0.7,
+        api_key="test-key",
+        transport=transport,
+    )
+    assert transport.call_count == 1
+    assert s4["decision"] == "extract"
+    assert s4["decision_fingerprint"] == fingerprint_1
 
 
 def test_context_change_and_immutable_artifacts(tmp_path):

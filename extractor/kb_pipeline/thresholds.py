@@ -31,7 +31,9 @@ DEFAULT_THRESHOLDS: Mapping[str, float] = {
     "jev_usefulness": 0.70,
     # filtering.assess_filter defaults for the context sufficiency question
     "jev_context": 0.60,
-    # filtering._LOW_USE_CONFIDENCE, routing-only topic label
+    # filtering._LOW_USE_CONFIDENCE: below this the source is rejected outright
+    "jev_low_use": 0.20,
+    # routing-only topic label; never a category decision
     "jev_topic_routing": 0.20,
 }
 
@@ -41,6 +43,7 @@ _THRESHOLD_PROVENANCE: Mapping[str, str] = {
     "category_confidence": "clm-latest category probe; not a measured guarantee",
     "jev_usefulness": "Jev default setting; not a measured guarantee",
     "jev_context": "Jev default setting; not a measured guarantee",
+    "jev_low_use": "filtering._LOW_USE_CONFIDENCE default; not a measured guarantee",
     "jev_topic_routing": "routing-only topic label, never a category decision",
 }
 
