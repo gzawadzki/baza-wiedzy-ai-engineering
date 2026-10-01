@@ -626,6 +626,64 @@ def generate_obsidian_markdown(
     print(f"[+] Zaktualizowano indeks autora ({len(all_notes)} łącznie) w: {index_file}")
 
 
+def run_account_pipeline(raw_items: List[Dict[str, Any]], args: argparse.Namespace) -> None:
+    """OCR i wątek, filtr lokalnego CLM oraz Jev, kategoria, ekstrakcja Space Bunny."""
+    from kb_pipeline.account_run import analyze_loaded
+    from kb_pipeline.live_adapters import (
+        make_categorizer,
+        make_jev,
+        make_local_filter,
+        make_summarizer,
+        require_runtime_config,
+    )
+    from kb_pipeline.notes import write_staging
+    from kb_pipeline.period import in_period, parse_day
+
+    if args.analyze_only and not args.since and not args.until:
+        raise SystemExit("Podaj okres: --since YYYY-MM-DD i opcjonalnie --until YYYY-MM-DD.")
+    config = require_runtime_config()
+    since = parse_day(args.since) if args.since else None
+    until = parse_day(args.until) if args.until else None
+    window = [
+        item for item in raw_items
+        if not str(item.get("full_text") or item.get("text") or "").startswith("RT @")
+        and in_period(item, since=since, until=until)
+    ]
+    print(
+        f"[*] Pipeline: okres={args.since or '*'}..{args.until or '*'} | "
+        f"lokalny CLM={config['local_model']} | ekstrakcja={config['extraction_model']} | "
+        f"wpisy={len(window)}"
+    )
+    local_filter = make_local_filter(config["local_base"], config["local_key"], config["local_model"])
+    categorize = make_categorizer(config["local_base"], config["local_key"], config["local_model"])
+    summarize = make_summarizer(config["extraction_base"], config["extraction_key"], config["extraction_model"])
+    jev = make_jev(config["jev_model"])
+    fetch_status = None
+    if not args.analyze_only:
+        from kb_pipeline.apify_x import fetch_status as fetch_status
+    results = analyze_loaded(
+        window,
+        handle=args.handle,
+        known_items=raw_items,
+        local_filter=local_filter,
+        jev_evaluate=jev,
+        categorize=categorize,
+        summarize=summarize,
+        fetch_status=fetch_status,
+    )
+    notes_dir = (
+        Path(args.output).parent / args.handle / "Wpisy"
+        if args.output
+        else Path(__file__).resolve().parent.parent / "Źródła" / args.handle / "Wpisy"
+    )
+    written = write_staging([item for item in results if item.status == "extract"], args.handle, notes_dir)
+    output_path = Path(args.output) if args.output else Path(__file__).resolve().parent.parent / "Źródła" / "indeks.md"
+    if written or notes_dir.exists():
+        generate_obsidian_markdown([], output_path, args.handle)
+    counts = {status: sum(item.status == status for item in results) for status in ("extract", "reject", "defer", "error")}
+    print(f"[+] Zapisano {len(written)} notatek. extract={counts['extract']} reject={counts['reject']} defer={counts['defer']} error={counts['error']}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Ekstrakcja porad Kuna Chena (@kunchenguid) z X/Twittera do Obsidiana."
@@ -682,6 +740,11 @@ def main():
         type=int,
         default=MAX_LLM_WORKERS,
         help=f"Liczba równoległych wywołań LLM/DeepSeek (domyślnie: {MAX_LLM_WORKERS})",
+    )
+    parser.add_argument(
+        "--legacy",
+        action="store_true",
+        help="Stary filtr Jev Score i ekstrakcja jednym modelem, bez OCR i lokalnego CLM",
     )
 
     args = parser.parse_args()
@@ -813,6 +876,10 @@ def main():
 
     if not raw_items:
         print("[*] Brak nowych wpisów do analizy. Wszystkie wpisy z tego zakresu są już w bazie wiedzy.")
+        return
+
+    if not args.legacy:
+        run_account_pipeline(raw_items, args)
         return
 
     # 2. Normalizacja

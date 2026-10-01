@@ -2,11 +2,20 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+from .account_run import run_accounts
+from .clm_screen import screen_cache
 from .audit import audit, snapshot, verify_snapshot
 from .claim_extraction import extract_live_claims
 from .jev_provider import JevError
+from .live_adapters import configured_handles
 from .live_jev import evaluate_live_source
 from .pilot import run_pilot
 from .storage import SourceStore
@@ -52,6 +61,21 @@ def main():
     c.add_argument("--source-id", type=str, required=True, help="X source ID (x:<numeric_id>)")
     c.add_argument("--content-hash", type=str, required=True, help="Content hash for the source revision")
     c.add_argument("--model", type=str, default="jev-latest", help="TypeSafe model identifier")
+    r = commands.add_parser("run", help="Pobierz okres, OCR i wątek, filtruj CLM+Jev, kategoryzuj, ekstrahuj")
+    r.add_argument("--handles", default="", help="Konta X, rozdzielone przecinkami")
+    r.add_argument("--since", default=None, help="Początek okresu YYYY-MM-DD, włącznie")
+    r.add_argument("--until", default=None, help="Koniec okresu YYYY-MM-DD, wyłącznie")
+    r.add_argument("--cache-dir", type=Path, default=Path("."))
+    r.add_argument("--workspace", type=Path, required=True)
+    r.add_argument("--vault", type=Path, default=None)
+    r.add_argument("--limit", type=int, default=80)
+    r.add_argument("--cache-only", action="store_true")
+    r.add_argument("--publish", action="store_true", help="Zapisz notatki do vault/Źródła")
+    s = commands.add_parser("screen-cache", help="Lokalny CLM na pobranym cache, bez Jev i bez vaulta")
+    s.add_argument("--cache-dir", type=Path, default=Path("."))
+    s.add_argument("--workspace", type=Path, required=True)
+    s.add_argument("--handles", default="")
+    s.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
     if args.command == "audit":
         result = audit(args.vault)
@@ -114,6 +138,44 @@ def main():
         print(json.dumps(result, ensure_ascii=True))
         if result.get("status") == "error":
             raise SystemExit(1)
+    elif args.command == "screen-cache":
+        workspace = args.workspace.resolve()
+        cache_dir = args.cache_dir.resolve()
+        if workspace == cache_dir or cache_dir in workspace.parents:
+            parser.error("Workspace must live outside the cache directory")
+        handles = [part.strip().lstrip("@") for part in args.handles.split(",") if part.strip()] or None
+        try:
+            result = screen_cache(cache_dir, workspace, handles=handles, workers=args.workers)
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
+            raise SystemExit(1) from None
+        print(json.dumps({"status": "ok", "posts": result["posts"], "counts": result["counts"], "by_handle": result["by_handle"]}, ensure_ascii=False))
+    elif args.command == "run":
+        handles = [part.strip().lstrip("@") for part in args.handles.split(",") if part.strip()] or None
+        publish_dir = None
+        if args.publish:
+            if args.vault is None:
+                parser.error("Publikacja wymaga --vault")
+            vault = args.vault.resolve(strict=True)
+            publish_dir = vault / "Źródła"
+            workspace = args.workspace.resolve()
+            if workspace == vault or vault in workspace.parents:
+                parser.error("Workspace must live outside the vault")
+        try:
+            result = run_accounts(
+                handles=handles or configured_handles(),
+                since=args.since,
+                until=args.until,
+                cache_dir=args.cache_dir,
+                workspace=args.workspace,
+                limit=args.limit,
+                fetch=not args.cache_only,
+                publish_dir=publish_dir,
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
+            raise SystemExit(1) from None
+        print(json.dumps({"status": "ok", "handles": {name: {key: value[key] for key in ("fetched", "in_period", "extracted", "rejected", "deferred", "errors")} for name, value in result["handles"].items()}}, ensure_ascii=False))
     elif args.command == "verify-snapshot":
         errors = verify_snapshot(args.destination)
         print(json.dumps({"verified": not errors, "mismatches": errors}, ensure_ascii=False))

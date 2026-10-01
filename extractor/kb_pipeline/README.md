@@ -1,6 +1,6 @@
 # Pipeline wiedzy — stan wdrożenia
 
-Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). **Nie ma jeszcze** automatycznej publikacji notatek, niezależnej weryfikacji semantycznej ani komend `run` i `resume`; pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
+Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale CLI nadal nie publikuje: brak komend `run`, `resume` i `rollback`. Pilot ma wyłącznie lokalne wyszukiwanie read-only. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
 
 Uruchamiaj z katalogu `extractor/` po instalacji `pip install -r requirements.txt` (do uruchomienia testów dodatkowo `pip install pytest`). Ścieżki raportu, snapshotu i workspace muszą wskazywać poza vault:
 
@@ -39,6 +39,10 @@ Weryfikacja cytatu jest deterministycznym sprawdzeniem lokalnego tekstu. Wynik s
 Dla identycznego fixture hash tworzony jest katalog `offline-<fixture_hash>` w workspace. Zawiera on bazę indeksu i cache, `proposal.md` (gdy claim przejdzie bramkę), oraz artefakty JSON: `validated_input_summary.json`, `context_bundles.json`, `verification_results.json`, `search_candidates.json` i `proposal_decisions.json`. Manifest przebiegu jest zapisywany w lokalnym cache. Ponowne uruchomienie z tym samym fixture korzysta z tego samego katalogu i nie zmienia vaultu.
 
 Pilot nie uruchamia Jev, modelu językowego, ekstrakcji, migracji ani starego `extract_kunchen_tips.py`. Etapy semantyki i publikacji pozostają odroczone. `proposal.md` jest wyłącznie propozycją do ręcznego przeglądu: nie ma automatycznej publikacji ani zapisu do notatek vaultu.
+
+## Publisher (biblioteka, bez komendy CLI)
+
+`apply_publication` zapisuje tylko ścieżki z allowlisty, po ponownym sprawdzeniu hashy bazowych. Każdy plik jest podmieniany osobnym `os.replace` w jego katalogu; kilka takich podmian nie jest transakcją całego vaulta. Journal, lock i backup leżą w workspace poza vaultem. `rollback_publication` przywraca poprzednie bajty zarządzanych plików. Ręczna zmiana po zapisie zatrzymuje rollback konfliktem i niczego nie nadpisuje. Przerwany zapis zostawia journal `applying`; `recover_publication` cofa już zapisane pliki i nie dokańcza pozostałych. Ponowne wywołanie z tą samą treścią i zgodnymi hashami nie zapisuje plików drugi raz.
 
 ### Tests
 
