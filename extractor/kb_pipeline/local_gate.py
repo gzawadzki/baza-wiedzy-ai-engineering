@@ -6,6 +6,7 @@ import re
 
 from .assemble import AssembledPost
 from .decisions import CATEGORIES
+from .thresholds import DEFAULT_THRESHOLDS
 
 _REACTION = frozenset({
     "this", "that", "same", "agreed", "agree", "exactly", "yes", "yeah", "yep", "yup",
@@ -41,9 +42,14 @@ def screen_focus(assembled: AssembledPost) -> tuple[str, str] | None:
 # A real rule in English and Polish stayed above 0.50. A Chinese rule was 0.39.
 # Reactions and thanks stayed under 0.26. Hiring and course ads scored promo above 0.93.
 # These bars only reject. Anything clearer goes to Jev.
-CLAIM_REJECT = 0.30
-PROMO_REJECT = 0.75
-CATEGORY_CONFIDENCE = 0.50
+#
+# ``thresholds.DEFAULT_THRESHOLDS`` is the single definition site of these three
+# values. The names below stay as the public spelling of this module and are
+# bound to that owner, so there is no second copy to drift. No model policy
+# changed: the numbers are the same ones the code used before.
+CLAIM_REJECT = DEFAULT_THRESHOLDS["focus_claim_reject"]
+PROMO_REJECT = DEFAULT_THRESHOLDS["promotion_reject"]
+CATEGORY_CONFIDENCE = DEFAULT_THRESHOLDS["category_confidence"]
 
 
 def filter_questions() -> dict[str, dict]:

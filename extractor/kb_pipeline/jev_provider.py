@@ -15,6 +15,7 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 
 from .schemas import ContextBundle, SourceRecord
+from .filtering import TOPIC_OPTIONS as _TOPIC_OPTIONS  # single definition site
 
 _ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 _MAX_RETRY_DELAY_SECONDS = 5.0
@@ -25,7 +26,6 @@ _ANSWER_TYPES = {
     "context_sufficient": "noul",
     "topic": "choice",
 }
-_TOPIC_OPTIONS = {"compaction", "evals", "harness", "other"}
 
 
 class JevError(RuntimeError):

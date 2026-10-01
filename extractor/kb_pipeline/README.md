@@ -1,6 +1,6 @@
 # Pipeline wiedzy — stan wdrożenia
 
-Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Pionowy przebieg offline end-to-end jest dostępny przez `run --offline`. Retrieval CLI udostępnia komendy `reindex` i `search`. Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale publikacja do vaulta pozostaje zablokowana (`run --publish` jest zablokowane); brak komend `resume` i `rollback`. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
+Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Pionowy przebieg offline end-to-end jest dostępny przez `run --offline`. Retrieval CLI udostępnia komendy `reindex` i `search`. Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale publikacja do vaulta pozostaje zablokowana (`run --publish` jest zablokowane); brak komendy `rollback` (wznowienie przerwanego przebiegu offline obsługuje komenda `resume`). Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
 
 Uruchamiaj z katalogu `extractor/` po instalacji `pip install -r requirements.txt` (do uruchomienia testów dodatkowo `pip install pytest`). Ścieżki raportu, snapshotu i workspace muszą wskazywać poza vault:
 
@@ -211,3 +211,114 @@ python -m kb_pipeline run --offline --offline-input ../.. \
 
 Testy: `python -m pytest -q tests/test_offline_flow.py` (syntetyczny vault w `tmp_path`,
 offline, bez kluczy i bez sieci).
+## Stan, cache i budzet (PKG-2B)
+
+Cztery rzeczy, ktore przebieg offline wczesniej udawal, a teraz ma: trwala
+tozsamosc tezy niezalezna od rewizji zrodla, punkty kontrolne z realnym
+wznowieniem, klucz surowej oceny bez progow, oraz usage i limity prob/tokenow
+w manifescie.
+
+### Klucz zaleznosci, nie nazwa katalogu
+
+`manifest.input_hashes` zawiera `vault_fingerprint` (SHA-256 z sciezek i bajtow
+notatek, ktore czyta indekser i publisher) oraz `index_fingerprint` i
+`notes_fingerprint`. Nazwa katalogu vaultu jest sciezka, nie zaleznoscia.
+Klucz etapu to wciaz `StageCache.key(stage, input, context, model, prompt,
+schema)`; **progi, decyzja, wersja polityki, budzet i run_id sa poza kluczem**.
+`live_jev.evaluate_live_source` takze tego wymaga: zmiana progu albo polityki
+przelicza decyzje z cache i **nie wywoluje modelu ponownie**
+(`decision_fingerprint` opisuje decyzje, nie surowa odpowiedz).
+
+Zmiana zawartosci notatki uniewaznia tylko to, co ja czytalo: etap integracji
+przelicza sie od nowa, a CLM, Jev, kategoria i ekstrakcja odtwarzaja sie z cache
+bez nowego wywolania. Zmiana modelu, promptu, kontekstu albo rewizji zrodla
+uniewaznia etap, ktory te rzeczy widzial.
+
+### Trwala tozsamosc tezy i notatki
+
+`kb_pipeline/identity.py` prowadzi rejestr w workspace
+(`identity/registry.json`, zapisywany atomowo):
+
+- identyfikator jest nadawany **raz**, przy pierwszym zapisie, i nie zalezy od
+  tytulu notatki ani od pojedynczego tweeta (`kb-clm-...` dla nowej notatki);
+- dopasowanie idzie po **id zrodla + znormalizowanym cytacie**, nigdy po
+  offsetach: przesuniecie fragmentu w tekscie nie tworzy nowej tozsamosci;
+- zmiana warunkow, ograniczen, zakresu, rodzaju lub wersji technologii to
+  **nowa rewizja tej samej tezy** (`revision: 2`), a rewizja zrodla jest
+  zapisywana obok, nie wewnatrz tozsamosci;
+- ten sam cytat dajacy inna teze (parafraza) albo kilka rekordow dla tego samego
+  dowodu to **jednoznaczny brak dopasowania**: oba rekordy zostaja jako kandydaci
+  do uzgodnienia (`status: "ambiguous"`, `unresolved_candidates`). Nic nie jest
+  scalane automatycznie, a kazdy raport ma `semantic_dedup: "not guaranteed"`;
+- ten sam cytat z **innego** zrodla to kandydat do scalenia, nie scalenie.
+
+Artefakty: `artifacts/claim_identity.json` (wynik tozsamosci, bajtowo stabilny
+miedzy powtorzeniami), `artifacts/note_identity.json`, `identity/registry.json`.
+Przejscie (`new` / `unchanged` / `revision` / `ambiguous`) jest w `summary.json`
+i w checkpointach, bo rozni sie miedzy pierwszym zapisem a odtwarzaniem.
+
+### Wznowienie: `resume --run-id ... --workspace ...`
+
+Kazdy etap zapisuje po sobie `checkpoints.json` (status, klucz cache, SHA-256
+kazdego artefaktu) i `artifacts/raw/<etap>.json` z surowa odpowiedzia dostawcy.
+
+**Kazde zrodlo ma wlasny przebieg:**
+`offline_cli` wylicza osobny `run_id` na zrodlo, wiec kazde ma wlasny
+`runs/<run_id>/` z wlasnymi `artifacts/`, `artifacts/raw/`, `summary.json`,
+`manifest.json`, `usage.json`, `checkpoints.json` i `run_descriptor.json`.
+Dzielenie jednego `artifacts/` miedzy zrodlami boku oznaczalo, ze drugie
+zrodlo nadpisywalo dowody pierwszego, a wznowiony przebieg znajdowal digest
+nalezacy do innego zrodla. Katalog partii (`batch_run_dir`) trzyma tylko
+`run_descriptor.json`, `summary.json`, `usage_manifest.json` i
+`usage_log.jsonl`; `result["runs"][i]["run_dir"]` wskazuje przebieg zrodla.
+`resume` czyta `run_descriptor.json` i:
+
+- etap dostawcy, ktory sie ukonczyl, ma ten sam klucz i niezmieniony artefakt,
+  jest **podawany z tego artefaktu** - bez ponownego wywolania, nawet gdy
+  `stage_cache.sqlite3` zniknie;
+- brak albo zmieniony artefakt jest **zgloszony** (`artifact_problems`) i etap jest
+  przeliczany; jesli zniknela tez baza cache, dostawca jest wolany jeszcze raz,
+  ale tylko dla tego etapu;
+- brak `run_descriptor.json` to **odmowa**, nie zgadywanie: resume nie wie, czym
+  byl przebieg. Podobnie resume odmawia podmiany `fake-offline` na przebieg
+  `live` - zywe dostawcy trzeba wstrzyknac jawnie.
+
+```bash
+python -m kb_pipeline run --offline --offline-input ../../cache.json \
+  --vault .. --workspace ../../kb-workspace
+python -m kb_pipeline resume --run-id offline-flow-<hash> --workspace ../../kb-workspace
+```
+
+### Usage i budzet
+
+`usage.json` (na przebieg zrodla), `usage_manifest.json` i `usage_log.jsonl`
+(partia) plus `summary.usage` i `summary.budget`.
+Brak usage od dostawcy to **`not_measured`**, nigdy `0`; `RunManifest.token_count`
+i `.cost` pozostaja `null`, a `.duration_seconds` jest zmierzony.
+
+`--max-attempts` i `--max-tokens` to twarde limity sprawdzane **przed** wywolaniem,
+ktore by je przekroczono. Przekroczenie zatrzymuje przebieg ze statusem
+`budget_exhausted` i `budget_stopped: true` w raporcie - nie `defer` i nie
+`error`, a liczniki `extract`/`reject`/`defer`/`error` zachowuja swoje
+znaczenie. Rezerwacja
+tokenow to najwieksze zmierzone wywolanie; wywolanie, ktore nic nie zglosilo,
+jest obciazane ta rezerwacja. Gdy z `--max-tokens`
+zaden dostawca nie raportuje tokenow, przebieg zatrzymuje sie po pierwszej
+probie pomiaru: limit, ktorego nie da sie zmierzyc, nie jest limitem, a ta jedna
+proba jest jawnie raportowana - nigdy cicha, bez limitu.
+**Budzet nie jest gwarancja kosztu ani udowodniona granica tokenow.**
+Tylko limit prob liczy kazde wywolanie; tokeny sa ograniczone wylacznie tym, co
+dostawcy zglosily, a koszt pozostaje niezmierzony tam, gdzie nikt go nie zwraca.
+Rezerwacja oparta na poprzednich, zmierzonych wywolaniach **nie jest gorna granica**
+`budzet.not_guaranteed`.
+
+### Poza zakresem tego pakietu
+
+`independently_validated` nadal `false`, deduplikacja semantyczna nie jest
+gwarantowana, publisher pozostaje plan-only (`run --publish` odrzucone), a
+zapis do vaultu i wszystko w `Zrodla/` pozostaja poza zakresem. Synchronizacja
+progow jest jednym miejscem (`thresholds.DEFAULT_THRESHOLDS`); `local_gate` i
+`filtering` maja te same wartosci jako wiazane nazwy, nie drugie kopie.
+
+Testy: `python -m pytest -q tests/test_state_cache.py` (offline, wstrzyknieci
+dostawcy, syntetyczny vault w `tmp_path`, bez kluczy i bez sieci).

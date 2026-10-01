@@ -232,7 +232,11 @@ def test_replay_does_not_create_new_files(tmp_path: Path):
     # file bytes are not stable across rebuilds of identical content; the rest must
     # match byte for byte.
     for name in before:
-        if name.endswith(("summary.json", "manifest.json")) or name.endswith(".sqlite3"):
+        # These carry run time or per-invocation history; everything else, including
+        # the claim identity artifacts and the registry, must match byte for byte.
+        if name.endswith(
+            ("summary.json", "manifest.json", "checkpoints.json", "usage_manifest.json", "usage.json")
+        ) or name.endswith((".sqlite3", ".jsonl")):
             continue
         assert after[name] == before[name], name
 
@@ -610,11 +614,15 @@ def test_integration_candidates_scoped_per_claim(tmp_path: Path):
         ),
     )
     assert result["status"] == "ok"
-    assert "c1" in seen_candidates and "c2" in seen_candidates
-    assert "kb-fail-fast" in seen_candidates["c1"]
-    assert "kb-postmortem" not in seen_candidates["c1"]
-    assert "kb-postmortem" in seen_candidates["c2"]
-    assert "kb-fail-fast" not in seen_candidates["c2"]
+    # Two claims, two scoped candidate sets, and neither claim sees the other's
+    # note. The keys are the durable claim ids the run granted (PKG-2B), not the
+    # "c1"/"c2" the extractor injected: identity is assigned before integration,
+    # so the advisor receives the claim under the id that survives a revision.
+    seen_ids = sorted(seen_candidates)
+    assert len(seen_ids) == 2, seen_candidates
+    first, second = seen_ids
+    assert seen_candidates[first] == ["kb-fail-fast"], seen_candidates
+    assert seen_candidates[second] == ["kb-postmortem"], seen_candidates
 
 
 def test_parent_context_is_separated_from_focus_text(tmp_path: Path):
