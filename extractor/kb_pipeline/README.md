@@ -1,6 +1,6 @@
 # Pipeline wiedzy — stan wdrożenia
 
-Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Pionowy przebieg offline end-to-end jest dostępny przez `run --offline`. Retrieval CLI udostępnia komendy `reindex` i `search`. Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale publikacja do vaulta pozostaje zablokowana (`run --publish` jest zablokowane); brak komend `resume` i `rollback`. Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
+Faza 0: audyt read-only i snapshot wiedzy z manifestem SHA-256. Faza 1: kontrakty Pydantic, offline import cache z rewizjami SQLite, filtrowanie Jev pojedynczych źródeł (`jev-evaluate`) oraz ograniczona deterministyczna ekstrakcja claimów (`claim-extract`). Pionowy przebieg offline end-to-end jest dostępny przez `run --offline`. Retrieval CLI udostępnia komendy `reindex` i `search`. Biblioteka ma `apply_publication`, `rollback_publication` i `recover_publication`, ale publikacja do vaulta pozostaje zablokowana (`run --publish` jest zablokowane); brak komendy `rollback` (wznowienie przerwanego przebiegu offline obsługuje komenda `resume`). Stary `extract_kunchen_tips.py` pozostaje osobny i może pisać do vaulta; poniższe komendy tego nie robią.
 
 Uruchamiaj z katalogu `extractor/` po instalacji `pip install -r requirements.txt` (do uruchomienia testów dodatkowo `pip install pytest`). Ścieżki raportu, snapshotu i workspace muszą wskazywać poza vault:
 
@@ -215,8 +215,8 @@ offline, bez kluczy i bez sieci).
 
 Cztery rzeczy, ktore przebieg offline wczesniej udawal, a teraz ma: trwala
 tozsamosc tezy niezalezna od rewizji zrodla, punkty kontrolne z realnym
-wznowieniem, klucz surowej oceny bez progow, oraz usage i limity pro/tokenow
-w manifestem.
+wznowieniem, klucz surowej oceny bez progow, oraz usage i limity prob/tokenow
+w manifescie.
 
 ### Klucz zaleznosci, nie nazwa katalogu
 
@@ -307,7 +307,7 @@ zaden dostawca nie raportuje tokenow, przebieg zatrzymuje sie po pierwszej
 probie pomiaru: limit, ktorego nie da sie zmierzyc, nie jest limitem, a ta jedna
 proba jest jawnie raportowana - nigdy cicha, bez limitu.
 **Budzet nie jest gwarancja kosztu ani udowodniona granica tokenow.**
-Tylko limit probow liczy kazde wywolanie; tokeny sa ograniczone wylacznie tym, co
+Tylko limit prob liczy kazde wywolanie; tokeny sa ograniczone wylacznie tym, co
 dostawcy zglosily, a koszt pozostaje niezmierzony tam, gdzie nikt go nie zwraca.
 Rezerwacja oparta na poprzednich, zmierzonych wywolaniach **nie jest gorna granica**
 `budzet.not_guaranteed`.
