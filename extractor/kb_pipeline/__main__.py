@@ -11,6 +11,7 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from .account_run import run_accounts
+from .fetch_x import DEFAULT_ACCOUNTS, DEFAULT_DAYS, DEFAULT_LIMIT, DEFAULT_WORKSPACE, run_command as run_fetch_command
 from .clm_screen import screen_cache
 from .audit import audit, snapshot, verify_snapshot
 from .claim_extraction import extract_live_claims
@@ -133,6 +134,29 @@ def main():
     s.add_argument("--workspace", type=Path, required=True)
     s.add_argument("--handles", default="")
     s.add_argument("--workers", type=int, default=4)
+    f = commands.add_parser(
+        "fetch",
+        help="Pobierz nowe wpisy wybranych kont X do surowego cache w workspace "
+             "(bez LLM, bez zapisu do vaultu). Backend: clm (domyslnie) albo apify",
+    )
+    f.add_argument("--backend", choices=("clm", "apify"), default="clm",
+                   help="clm = skrypty z repo CLM (GraphQL, cookies); apify = aktor Apify (fallback)")
+    f.add_argument("--clm-dir", type=Path, default=None,
+                   help="Katalog repo CLM (domyslnie env CLM_DIR, potem D:\\projects\\CLM); tylko odczyt")
+    f.add_argument("--accounts", type=Path, default=None,
+                   help=f"Plik z handlami (jeden na linie, # komentarz). Domyslnie: enabled z CLM "
+                        f"monitored_authors.json (clm) albo {DEFAULT_ACCOUNTS.name} (apify)")
+    f.add_argument("--handle", action="append", default=[], help="Konto X (powtarzalne); nadpisuje liste")
+    f.add_argument("--since", default=None, help="Poczatek YYYY-MM-DD, wlacznie; domyslnie ostatni udany fetch z fetch_state.json")
+    f.add_argument("--until", default=None, help="Koniec YYYY-MM-DD, wylacznie (nie przesuwa stanu)")
+    f.add_argument("--default-days", type=int, default=DEFAULT_DAYS, help="Okno startowe, gdy brak stanu i --since")
+    f.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="Maks. wpisow na konto (apify)")
+    f.add_argument("--workspace", type=Path, default=DEFAULT_WORKSPACE, help="Stan i surowy cache, poza vaultem")
+    f.add_argument("--cache-dir", type=Path, default=Path("."), help="Katalog starych <handle>_raw_tweets.json (tylko dedupe)")
+    f.add_argument("--from-raw-dir", type=Path, default=None,
+                   help="Zaimportuj istniejace pliki CLM <handle>_raw_<N>d.json (np. D:\\projects\\CLM\\results\\raw_tweets) bez pobierania")
+    f.add_argument("--dry-run", action="store_true", help="Pokaz plan (okna, zapytania); bez pobierania i bez zapisu")
+    f.add_argument("--json", action="store_true", help="Raport jako JSON")
     ri = commands.add_parser(
         "reindex",
         help="Rebuild the read-only section index from the vault into the workspace",
@@ -289,6 +313,8 @@ def main():
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))
             raise SystemExit(1) from None
         print(json.dumps({"status": "ok", "handles": {name: {key: value[key] for key in ("fetched", "in_period", "extracted", "rejected", "deferred", "errors")} for name, value in result["handles"].items()}}, ensure_ascii=False))
+    elif args.command == "fetch":
+        raise SystemExit(run_fetch_command(args))
     elif args.command == "resume":
         try:
             result = resume_offline(

@@ -1,0 +1,7 @@
+# Konta X do komendy `python -m kb_pipeline fetch` (jeden handle na linie, # = komentarz).
+# Kandydaci: ../Zródła/Rekomendowani praktycy AI Engineering.md (przepisz recznie wybranych).
+karminski3
+HamelHusain
+kunchenguid
+DrJimFan
+JustinLin610

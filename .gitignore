@@ -27,3 +27,8 @@ nul
 
 # Obsidian workspace noise
 Untitled.canvas
+
+# fetch: stan i surowy cache (workspace poza vaultem)
+kb-workspace/
+fetch_state.json
+clm_tmp/

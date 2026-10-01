@@ -28,13 +28,17 @@ def _collect(query: str, limit: int) -> list[dict[str, Any]]:
     return [item for item in client.dataset(dataset_id).iterate_items() if isinstance(item, dict)]
 
 
-def fetch_account(handle: str, *, since: str | None, until: str | None, limit: int) -> list[dict[str, Any]]:
+def build_query(handle: str, since: str | None, until: str | None) -> str:
     query = f"from:{handle.lstrip('@')}"
     if since:
         query += f" since:{since}"
     if until:
         query += f" until:{until}"
-    return _collect(query, limit)
+    return query
+
+
+def fetch_account(handle: str, *, since: str | None, until: str | None, limit: int) -> list[dict[str, Any]]:
+    return _collect(build_query(handle, since, until), limit)
 
 
 def fetch_status(tweet_id: str, *, limit: int = 20) -> dict[str, Any] | None:
