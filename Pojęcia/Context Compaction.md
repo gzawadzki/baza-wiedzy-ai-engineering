@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Compaction, Kompakcja kontekstu, Context Window Management]
 tagi: [agenci, kontekst, harness, optymalizacja]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Context Compaction

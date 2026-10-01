@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Step-by-step verification, Weryfikacja pośrednia]
 tagi: [weryfikacja, jakosc, harness, agenci]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Weryfikacja krokowa

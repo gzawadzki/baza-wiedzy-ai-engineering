@@ -3,8 +3,8 @@ typ: pojęcie
 aliases: [Agent Sandbox, Izolacja środowiska, Bezpieczeństwo agenta, Środowisko wykonawcze]
 tagi: [bezpieczenstwo, agenci, harness, sandbox, konteneryzacja]
 źródła:
-  - "[[simonw — Baza Wskazówek i Komentarzy]]"
-  - "[[DrJimFan — Baza Wskazówek i Komentarzy]]"
+  - "[[simonw — Indeks]]"
+  - "[[DrJimFan — Indeks]]"
 ---
 
 # Sandbox i Granice Bezpieczeństwa Agenta

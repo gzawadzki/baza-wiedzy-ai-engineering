@@ -3,8 +3,8 @@ typ: pojęcie
 aliases: [Dynamic Micro-Skills, Skill as Code, Metaprogramowanie skilli]
 tagi: [agenci, skille, architektura, harness, metaprogramowanie]
 źródła:
-  - "[[karminski3 — Baza Wskazówek i Komentarzy]]"
-  - "[[HamelHusain — Baza Wskazówek i Komentarzy]]"
+  - "[[karminski3 — Indeks]]"
+  - "[[HamelHusain — Indeks]]"
 ---
 
 # Dynamiczne Skille i Metaprogramowanie Agenta

@@ -6,17 +6,81 @@
   "hideUnresolved": false,
   "showOrphans": true,
   "collapse-color-groups": false,
-  "colorGroups": [],
+  "colorGroups": [
+    {
+      "query": "path:Pojęcia",
+      "color": {
+        "a": 1,
+        "rgb": 16744448
+      }
+    },
+    {
+      "query": "path:Narzędzia",
+      "color": {
+        "a": 1,
+        "rgb": 4259584
+      }
+    },
+    {
+      "query": "path:Źródła/kunchenguid",
+      "color": {
+        "a": 1,
+        "rgb": 3381759
+      }
+    },
+    {
+      "query": "path:Źródła/karminski3",
+      "color": {
+        "a": 1,
+        "rgb": 16724639
+      }
+    },
+    {
+      "query": "path:Źródła/simonw",
+      "color": {
+        "a": 1,
+        "rgb": 65535
+      }
+    },
+    {
+      "query": "path:Źródła/HamelHusain",
+      "color": {
+        "a": 1,
+        "rgb": 16776960
+      }
+    },
+    {
+      "query": "path:Źródła/teortaxesTex",
+      "color": {
+        "a": 1,
+        "rgb": 11468799
+      }
+    },
+    {
+      "query": "path:Źródła/DrJimFan",
+      "color": {
+        "a": 1,
+        "rgb": 65280
+      }
+    },
+    {
+      "query": "path:Źródła/JustinLin610",
+      "color": {
+        "a": 1,
+        "rgb": 16711935
+      }
+    }
+  ],
   "collapse-display": false,
   "showArrow": false,
   "textFadeMultiplier": 0,
-  "nodeSizeMultiplier": 1,
+  "nodeSizeMultiplier": 1.15,
   "lineSizeMultiplier": 1,
   "collapse-forces": false,
-  "centerStrength": 0.518713248970312,
-  "repelStrength": 10,
+  "centerStrength": 0.45,
+  "repelStrength": 14,
   "linkStrength": 1,
-  "linkDistance": 250,
-  "scale": 0.9999999999999696,
+  "linkDistance": 180,
+  "scale": 0.38230109687698954,
   "close": true
 }

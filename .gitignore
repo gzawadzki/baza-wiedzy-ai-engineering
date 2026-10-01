@@ -14,3 +14,10 @@ extractor/*_raw_tweets.json
 
 # Obsidian workspace cache
 .obsidian/workspace*
+
+# Logi operacyjne i stan lokalny
+logs/
+state/
+config/
+.herdr-*
+nul

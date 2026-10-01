@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [AI Code Review, Automated Code Review]
 tagi: [code-review, weryfikacja, jakosc, agenci]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Code Review w procesie z AI

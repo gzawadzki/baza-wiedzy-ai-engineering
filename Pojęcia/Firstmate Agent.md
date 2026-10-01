@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Firstmate, Agent Orkiestrujący, Executive Agent]
 tagi: [orkiestracja, agenci, firstmate, architektura]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # Firstmate Agent

@@ -3,7 +3,7 @@ typ: pojęcie
 aliases: [Wymóg potwierdzenia pominięcia CI, Bypass confirmation, Safe overrides]
 tagi: [bezpieczenstwo, ci-cd, agenci, prompt-adherence]
 źródła:
-  - "[[Kun Chen — Baza Wskazówek i Komentarzy]]"
+  - "[[kunchenguid — Indeks]]"
 ---
 
 # CI Check Bypass Confirmation
