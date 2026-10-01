@@ -40,7 +40,7 @@ from kb_pipeline.run_state import RunState
 from kb_pipeline.schemas import Claim, Evidence, SourceRecord
 from kb_pipeline.stage_cache import StageCache
 from kb_pipeline.storage import SourceStore
-from kb_pipeline.usage import BudgetExceeded, FlowBudget, UsageLedger, sanitize_usage
+from kb_pipeline.usage import BudgetExceeded, FlowBudget, UsageLedger, sanitize_usage, summarise
 
 EXTRACTOR = Path(__file__).resolve().parents[1]
 
@@ -1260,3 +1260,41 @@ def test_budget_distinguishes_measured_zero_tokens_from_unmeasured():
     assert payload["tokens_measured"] == 0
     assert payload["tokens_charged"] == 0
     assert payload["reservation_tokens"] == 0
+
+
+def test_usage_ledger_accumulates_tokens_and_cost_across_multiple_calls_for_same_stage():
+    ledger = UsageLedger()
+    ledger.record_call(
+        "semantic_check",
+        duration=0.01,
+        usage={"input_tokens": 100, "output_tokens": 50},
+        cost=0.012,
+    )
+    ledger.record_call(
+        "semantic_check",
+        duration=0.02,
+        usage={"input_tokens": 40, "output_tokens": 20},
+        cost=0.008,
+    )
+    payload = ledger.to_dict()
+    stage = payload["stages"][0]
+    assert stage["stage"] == "semantic_check"
+    assert stage["attempts"] == 2
+    assert stage["tokens"]["input"] == 140
+    assert stage["tokens"]["output"] == 70
+    assert stage["tokens"]["total"] == 210
+    assert stage["cost"]["value"] == pytest.approx(0.020)
+    assert payload["totals"]["tokens"]["total"] == 210
+    assert payload["totals"]["cost"]["value"] == pytest.approx(0.020)
+
+
+def test_summarise_accumulates_cost_across_multiple_sources_for_same_stage():
+    ledger1 = UsageLedger()
+    ledger1.record_call("clm_gate", duration=0.01, cost=0.015)
+    ledger2 = UsageLedger()
+    ledger2.record_call("clm_gate", duration=0.02, cost=0.025)
+    summary = summarise([ledger1.to_dict(), ledger2.to_dict()])
+    stage = summary["stages"][0]
+    assert stage["stage"] == "clm_gate"
+    assert stage["cost"]["value"] == pytest.approx(0.040)
+    assert summary["totals"]["cost"]["value"] == pytest.approx(0.040)

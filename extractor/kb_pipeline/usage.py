@@ -142,10 +142,10 @@ class UsageLedger:
             entry.duration_seconds = (entry.duration_seconds or 0.0) + duration
         measured = sanitize_usage(usage)
         if measured is not None:
-            entry.input_tokens = int(measured.get("input_tokens", 0))
-            entry.output_tokens = int(measured.get("output_tokens", 0))
+            entry.input_tokens = (entry.input_tokens or 0) + int(measured.get("input_tokens", 0))
+            entry.output_tokens = (entry.output_tokens or 0) + int(measured.get("output_tokens", 0))
         if isinstance(cost, (int, float)) and not isinstance(cost, bool):
-            entry.cost = float(cost)
+            entry.cost = round((entry.cost or 0.0) + float(cost), 6)
 
     def record_replay(self, stage: str) -> None:
         self._entry(stage).replays += 1
@@ -387,7 +387,11 @@ def summarise(payloads: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                     )
             cost = stage.get("cost") or {}
             if cost.get("status") == MEASURED and cost.get("value") is not None:
-                entry["cost"] = {"status": MEASURED, "value": float(cost["value"])}
+                current_cost = entry["cost"]
+                if current_cost.get("status") == MEASURED and current_cost.get("value") is not None:
+                    current_cost["value"] = round(float(current_cost["value"]) + float(cost["value"]), 6)
+                else:
+                    entry["cost"] = {"status": MEASURED, "value": float(cost["value"])}
     ordered = list(stages.values())
     for entry in ordered:
         entry["duration_seconds"] = round(entry["duration_seconds"], 6)
@@ -434,7 +438,7 @@ def summarise(payloads: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                 }
             ),
             "cost": (
-                {"status": MEASURED, "value": sum(costs)}
+                {"status": MEASURED, "value": round(sum(costs), 6)}
                 if costs
                 else {
                     "status": NOT_MEASURED,
