@@ -322,3 +322,41 @@ progow jest jednym miejscem (`thresholds.DEFAULT_THRESHOLDS`); `local_gate` i
 
 Testy: `python -m pytest -q tests/test_state_cache.py` (offline, wstrzyknieci
 dostawcy, syntetyczny vault w `tmp_path`, bez kluczy i bez sieci).
+
+## Pobieranie nowych wpisow (`fetch`)
+
+Aktualizacja bazy wiedzy o nowe posty wybranych kont X. **Bez LLM i bez zapisu do vaultu**:
+wynik to surowy cache w workspace (poza repo/vaultem, w `.gitignore`).
+
+```bash
+cd extractor
+# plan bez pobierania (nie wola CLM ani Apify, nic nie zapisuje)
+python -m kb_pipeline fetch --dry-run
+# domyslnie: backend clm, konta enabled z CLM monitored_authors.json, okno od ostatniego udanego fetch
+python -m kb_pipeline fetch
+# wybrane konta / lista z pliku / okno reczne
+python -m kb_pipeline fetch --handle DrJimFan --handle karminski3 --since 2026-09-20
+python -m kb_pipeline fetch --accounts accounts.txt
+# import istniejacych plikow CLM (bez pobierania)
+python -m kb_pipeline fetch --from-raw-dir D:\projects\CLM\results\raw_tweets
+# fallback: Apify (wymaga APIFY_API_TOKEN w extractor/.env)
+python -m kb_pipeline fetch --backend apify --accounts accounts.txt --limit 80
+```
+
+- **Backendy**: `clm` (domyslny) uruchamia `fetch_raw_history_30d.py` z repo CLM
+  (`--clm-dir` / env `CLM_DIR`, domyslnie `D:\projects\CLM`; repo tylko do odczytu: tymczasowy plik autorow
+  i `--out` leza w workspace, `x_cookies.json` czyta wylacznie skrypt CLM). `--days` liczone ze stanu.
+  Konto musi miec `user_id` w CLM `monitored_authors.json`. `apify` uzywa `apify_x.fetch_account`.
+- **Lista kont**: `--handle` > `--accounts` > (clm) enabled z CLM `monitored_authors.json` / (apify) `accounts.txt`.
+  Kandydatow szukaj w `Zrodla/Rekomendowani praktycy AI Engineering.md` (reczne przepisanie handli).
+- **Okno**: `--since` > `last_success` z `<workspace>/fetch_state.json` > `--default-days` (14). Stan przesuwa sie
+  tylko po udanym pobraniu bez `--until` (i bez obciecia `--limit` w apify); import `--from-raw-dir` stanu nie rusza.
+- **Wyniki** (`--workspace`, domyslnie `<repo>/../kb-workspace`): `raw/<handle>/<czas>.json` (tylko nowe wpisy),
+  `cache/<handle>_raw_tweets.json` (scalony, bez duplikatow po id; gotowy `--cache-dir` dla `run`).
+  Dedupe po id wzgledem wczesniejszych plikow `raw/` oraz starych `<handle>_raw_tweets.json` (`--cache-dir`).
+- Blad jednego konta nie przerywa pozostalych (kod wyjscia 1, jesli byl choc jeden blad). Token ani cookies nie sa drukowane.
+- **Od surowych wpisow do notatek `Zrodla/`**: istniejacy pipeline, osobnym krokiem (`fetch` nie wola LLM):
+  `python -m kb_pipeline run --offline --cache-dir ..\..\kb-workspace\cache --vault .. --workspace ..\..\kb-workspace`
+  (tryb offline z fake'ami, plan publikacji read-only) albo na zywych dostawcach
+  `python -m kb_pipeline run --cache-only --cache-dir ..\..\kb-workspace\cache --since YYYY-MM-DD --workspace ..\..\kb-workspace`
+  (staging w workspace). Publikacja do vaultu nadal tylko przez `apply_publication`.

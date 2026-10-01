@@ -104,3 +104,11 @@ Zawiera:
 - Wskazówkę inżynierską i anty-wzorce,
 - Bezpośredni link źródłowy do wpisu na X,
 - Wikilinki (`[[Harness]]`, `[[Weryfikator]]` itp.) łączące wpisy z Twoją bazą wiedzy.
+
+## Aktualizacja o nowe wpisy (`fetch`)
+
+```bash
+python -m kb_pipeline fetch --dry-run     # plan, bez pobierania
+python -m kb_pipeline fetch               # backend clm (D:\projects\CLM), konta z accounts.txt / CLM
+```
+Konta: `accounts.txt` (jeden handle na linie). Szczegoly i backend Apify: `kb_pipeline/README.md`.
