@@ -1,0 +1,51 @@
+{
+  "sources": [
+    {
+      "schema_version": 1,
+      "source_id": "x:900000001",
+      "author": "synthetic-fixture",
+      "url": "https://example.invalid/synthetic/pilot-context",
+      "text": "Synthetic fixture (not an expert statement): In a context-compaction simulation, preserve a small checkpoint with the active task constraints for the next turn.",
+      "published_at": null,
+      "fetched_at": "2026-01-01T00:00:00+00:00",
+      "language": "en",
+      "reply_to_id": null,
+      "conversation_id": null,
+      "quoted_source_id": null,
+      "raw_ref": "fixture:synthetic:pilot-context",
+      "content_hash": "22a852ad87ccfc2ea0fbabb3040e97186de5eb30e5a56972bc2aa11a4ee6c59d",
+      "context_status": "complete"
+    }
+  ],
+  "claims": [
+    {
+      "schema_version": 1,
+      "claim_id": "synthetic-compaction-claim",
+      "source_ids": [
+        "x:900000001"
+      ],
+      "text": "Synthetic fixture claim (not an expert statement): In the context-compaction simulation, preserve a small checkpoint with the active task constraints.",
+      "kind": "recommendation",
+      "evidence": [
+        {
+          "schema_version": 1,
+          "source_id": "x:900000001",
+          "quote": "preserve a small checkpoint with the active task constraints for the next turn."
+        }
+      ],
+      "scope": "Synthetic fixture only; not an expert statement.",
+      "conditions": [
+        "The fixture is being used to exercise offline pipeline artifacts."
+      ],
+      "limitations": [
+        "The support verdict is a fixture mock and is not independently validated."
+      ],
+      "technology": null,
+      "interpretation": null
+    }
+  ],
+  "mock_semantic_relations": {
+    "synthetic-compaction-claim": "supports"
+  },
+  "query": "compaction"
+}
