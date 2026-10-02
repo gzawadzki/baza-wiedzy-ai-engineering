@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ from .live_adapters import (
     make_summarizer,
     require_runtime_config,
 )
+from .local_gate import resolve_promotion_mode
 from .notes import write_staging
 from .period import in_period, parse_day
 from .run_flow import FlowResult, process_post
@@ -54,6 +56,7 @@ def analyze_loaded(
     summarize,
     ocr_url=None,
     fetch_status=None,
+    promotion_mode: str = "advisory",
 ) -> list[FlowResult]:
     memo: dict[str, dict[str, Any] | None] = {}
     pool = list(known_items)
@@ -78,6 +81,7 @@ def analyze_loaded(
             jev_evaluate=jev_evaluate,
             categorize=categorize,
             summarize=summarize,
+            promotion_mode=promotion_mode,
         )
         for item in items
     ]
@@ -88,6 +92,8 @@ def _result_row(result: FlowResult) -> dict[str, Any]:
         "source_id": result.source_id,
         "status": result.status,
         "reason": result.reason,
+        "clm_reason": result.clm_reason,
+        "jev_topic": result.jev_topic,
         "category": result.category,
         "title": None if result.summary is None else result.summary.get("title"),
         "ocr_status": None if result.assembled is None else result.assembled.ocr_status,
@@ -105,6 +111,7 @@ def run_accounts(
     limit: int = 80,
     fetch: bool = True,
     publish_dir: Path | None = None,
+    clm_promotion: str | None = None,
 ) -> dict[str, Any]:
     if publish_dir is not None:
         raise ValueError(
@@ -112,6 +119,8 @@ def run_accounts(
             "Ta sciezka pisala wprost do vaultu, omijajac apply_publication. "
             "Wynik laduj do stagingu w workspace, czyli wywolaj bez publish_dir."
         )
+    # explicit argument > KB_CLM_PROMOTION env > advisory
+    promotion_mode = resolve_promotion_mode(clm_promotion or os.getenv("KB_CLM_PROMOTION"))
     config = require_runtime_config()
     since_day = parse_day(since) if since else None
     until_day = parse_day(until) if until else None
@@ -122,7 +131,7 @@ def run_accounts(
     categorize = make_categorizer(config["local_base"], config["local_key"], config["local_model"])
     summarize = make_summarizer(config["extraction_base"], config["extraction_key"], config["extraction_model"])
     jev = make_jev(config["jev_model"])
-    report: dict[str, Any] = {"model": config["extraction_model"], "handles": {}}
+    report: dict[str, Any] = {"model": config["extraction_model"], "clm_promotion": promotion_mode, "handles": {}}
     for handle in selected:
         cached = _load_cache(cache_dir, handle)
         fetched: list[dict[str, Any]] = []
@@ -140,6 +149,7 @@ def run_accounts(
             categorize=categorize,
             summarize=summarize,
             fetch_status=fetch_status if fetch else None,
+            promotion_mode=promotion_mode,
         )
         staging = write_staging(results, handle, workspace / "staging" / handle)
         report["handles"][handle] = {

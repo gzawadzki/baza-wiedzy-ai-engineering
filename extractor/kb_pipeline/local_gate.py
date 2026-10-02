@@ -86,13 +86,39 @@ def category_question() -> dict[str, dict]:
     }
 
 
+PROMOTION_MODES = ("advisory", "reject")
+DEFAULT_PROMOTION_MODE = "advisory"
+PROMOTION_ADVISORY_REASON = "clm_promotion_advisory"
+
+
+def resolve_promotion_mode(value: str | None) -> str:
+    """Validate a promotion mode; None or empty means the default (advisory)."""
+    mode = (value or DEFAULT_PROMOTION_MODE).strip().lower()
+    if mode not in PROMOTION_MODES:
+        raise ValueError(f"clm promotion mode must be one of {', '.join(PROMOTION_MODES)}")
+    return mode
+
+
+class CategoryUncertain(ValueError):
+    """CLM could not pick a category with enough confidence. A defer, not a failure."""
+
+
 def decide_clm(
     response: dict,
     *,
     focus_claim_reject: float = CLAIM_REJECT,
     promotion_reject: float = PROMO_REJECT,
+    promotion_mode: str = "reject",
 ) -> tuple[str, str]:
-    """Code owns the threshold. CLM does not return keep or drop."""
+    """Code owns the threshold. CLM does not return keep or drop.
+
+    ``promotion_mode="reject"`` keeps the historical hard reject. ``"advisory"``
+    never rejects on the promotion score: a high score is reported as
+    ``clm_promotion_advisory`` (status keep) and Jev decides. The run pipeline
+    defaults to advisory; this function keeps ``reject`` so the offline flow and its
+    manifest are unchanged.
+    """
+    promotion_mode = resolve_promotion_mode(promotion_mode)
     if not isinstance(response, dict):
         return "defer", "local_filter_invalid"
     answers = response.get("answers")
@@ -102,10 +128,13 @@ def decide_clm(
     promo = _noul(answers.get("promotion"))
     if claim is None or promo is None:
         return "defer", "local_filter_invalid"
-    if promo >= promotion_reject:
+    promoted = promo >= promotion_reject
+    if promoted and promotion_mode == "reject":
         return "reject", "promotion"
     if claim < focus_claim_reject:
         return "reject", "low_focus_claim"
+    if promoted:
+        return "keep", PROMOTION_ADVISORY_REASON
     return "keep", "clm_focus_claim"
 
 
@@ -119,7 +148,7 @@ def category_from_clm(response: dict, *, category_confidence: float = CATEGORY_C
     if choice not in CATEGORIES or isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
         raise ValueError("kategoria CLM jest niekompletna")
     if float(confidence) < category_confidence:
-        raise ValueError("category_uncertain")
+        raise CategoryUncertain("category_uncertain")
     return str(choice)
 
 

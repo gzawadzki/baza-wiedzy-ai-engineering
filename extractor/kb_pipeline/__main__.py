@@ -78,6 +78,13 @@ def main():
     r.add_argument("--vault", type=Path, default=None)
     r.add_argument("--limit", type=int, default=80)
     r.add_argument("--cache-only", action="store_true")
+    r.add_argument(
+        "--clm-promotion",
+        choices=("advisory", "reject"),
+        default=None,
+        help="advisory (domyslnie): wysoki wynik promocji CLM nie odrzuca wpisu, decyduje Jev; "
+             "reject: dawne twarde odrzucenie. Domyslnie tez z env KB_CLM_PROMOTION",
+    )
     r.add_argument("--publish", action="store_true", help="Zapisz notatki do vault/Źródła")
     r.add_argument(
         "--offline",
@@ -308,6 +315,7 @@ def main():
                 limit=args.limit,
                 fetch=not args.cache_only,
                 publish_dir=publish_dir,
+                clm_promotion=args.clm_promotion,
             )
         except (OSError, RuntimeError, ValueError) as exc:
             print(json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False))

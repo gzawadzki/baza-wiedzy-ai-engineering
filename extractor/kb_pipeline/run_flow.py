@@ -17,7 +17,7 @@ from .assemble import AssembledPost, RelatedPiece, assemble_post
 from .context import build_context
 from .decisions import ContextCitation, ForeignQuoteError, parse_category, parse_summary
 from .filtering import assess_filter
-from .local_gate import decide_clm, screen_focus
+from .local_gate import CategoryUncertain, DEFAULT_PROMOTION_MODE, decide_clm, screen_focus
 from .schemas import ContextBundle, ContextStatus, FilterDecision, SourceRecord
 
 _X_TWITTER_DATE = "%a %b %d %H:%M:%S %z %Y"
@@ -32,6 +32,7 @@ class FlowResult:
     summary: dict[str, str | None] | None = None
     assembled: AssembledPost | None = None
     jev_topic: str | None = None
+    clm_reason: str | None = None
     context_citations: list[ContextCitation] = field(default_factory=list)
 
 
@@ -46,6 +47,7 @@ def process_post(
     jev_evaluate: Callable[[ContextBundle], dict],
     categorize: Callable[[AssembledPost], dict],
     summarize: Callable[[str, str], dict],
+    promotion_mode: str = DEFAULT_PROMOTION_MODE,
 ) -> FlowResult:
     try:
         assembled = assemble_post(
@@ -63,13 +65,14 @@ def process_post(
         status, reason = screened
         return FlowResult(assembled.source_id, status, reason, assembled=assembled)
     try:
-        status, reason = decide_clm(local_filter(assembled))
+        status, reason = decide_clm(local_filter(assembled), promotion_mode=promotion_mode)
     except Exception as exc:
         # a provider failure is an error, never a defer
         return FlowResult(assembled.source_id, "error", f"lokalny filtr: {exc}", assembled=assembled)
     if status != "keep":
         return FlowResult(assembled.source_id, status, reason, assembled=assembled)
 
+    clm_reason = reason
     bundle = _bundle(assembled)
     try:
         assessment = assess_filter(bundle, jev_evaluate(bundle))
@@ -82,12 +85,19 @@ def process_post(
             assessment.reason_code,
             assembled=assembled,
             jev_topic=assessment.topic,
+            clm_reason=clm_reason,
         )
 
     try:
         category = parse_category(categorize(assembled))
+    except CategoryUncertain as exc:
+        # Jev passed it; only the category is unclear. Needs review, not an error.
+        return FlowResult(
+            assembled.source_id, "defer", str(exc), assembled=assembled,
+            jev_topic=assessment.topic, clm_reason=clm_reason,
+        )
     except Exception as exc:
-        return FlowResult(assembled.source_id, "error", f"kategoria: {exc}", assembled=assembled, jev_topic=assessment.topic)
+        return FlowResult(assembled.source_id, "error", f"kategoria: {exc}", assembled=assembled, jev_topic=assessment.topic, clm_reason=clm_reason)
 
     related = _related_for_quote_check(bundle)
     try:
@@ -100,6 +110,7 @@ def process_post(
             category=category,
             assembled=assembled,
             jev_topic=assessment.topic,
+            clm_reason=clm_reason,
         )
 
     try:
@@ -114,6 +125,7 @@ def process_post(
             category=category,
             assembled=assembled,
             jev_topic=assessment.topic,
+            clm_reason=clm_reason,
             context_citations=citations,
         )
     except ValueError as exc:
@@ -124,6 +136,7 @@ def process_post(
             category=category,
             assembled=assembled,
             jev_topic=assessment.topic,
+            clm_reason=clm_reason,
         )
     return FlowResult(
         assembled.source_id,
@@ -133,6 +146,7 @@ def process_post(
         summary=summary,
         assembled=assembled,
         jev_topic=assessment.topic,
+        clm_reason=clm_reason,
     )
 
 
